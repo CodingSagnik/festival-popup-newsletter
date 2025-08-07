@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Festival Popup Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .button-primary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .button-primary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .stats {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .loading {
+            margin-top: 20px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎉</div>
+        <h1>Festival Popup & Newsletter</h1>
+        <p>Welcome to your festival campaign management system</p>
+        
+        <div class="buttons">
+            <a href="/admin" class="button button-primary" target="_blank">
+                🎪 Open Festival Admin
+            </a>
+            <button class="button" onclick="loadQuickStats()">
+                📊 Quick Stats
+            </button>
+        </div>
+
+        <div id="stats" class="stats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-number" id="total-subscribers">0</div>
+                <div class="stat-label">Total Subscribers</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="newsletters-sent">0</div>
+                <div class="stat-label">Newsletters Sent</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="active-festivals">0</div>
+                <div class="stat-label">Active Festivals</div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            Loading stats...
+        </div>
+    </div>
+
+    <script>
+        async function loadQuickStats() {
+            const statsDiv = document.getElementById('stats');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (statsDiv.style.display === 'block') {
+                statsDiv.style.display = 'none';
+                return;
+            }
+
+            loadingDiv.style.display = 'block';
+            
+            try {
+                // Get URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const shop = urlParams.get('shop') || 'test-festival-popup.myshopify.com';
+                
+                // Load stats
+                const statsResponse = await fetch(`/api/stats?shopDomain=${shop}`);
+                const statsData = await statsResponse.json();
+                
+                if (statsData.success) {
+                    document.getElementById('total-subscribers').textContent = statsData.stats.totalSubscribers;
+                    document.getElementById('newsletters-sent').textContent = statsData.stats.newslettersSent;
+                }
+
+                // Load festivals to count active ones
+                const festivalsResponse = await fetch(`/api/popup-settings?shopDomain=${shop}`);
+                const festivalsData = await festivalsResponse.json();
+                
+                let activeFestivals = 0;
+                if (festivalsData.success && festivalsData.settings.festivals) {
+                    const now = new Date();
+                    activeFestivals = festivalsData.settings.festivals.filter(festival => {
+                        const startDate = new Date(festival.startDate);
+                        const endDate = new Date(festival.endDate);
+                        return now >= startDate && now <= endDate;
+                    }).length;
+                }
+                
+                document.getElementById('active-festivals').textContent = activeFestivals;
+                
+                loadingDiv.style.display = 'none';
+                statsDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                loadingDiv.innerHTML = 'Error loading stats';
+            }
+        }
+
+        // Auto-load stats if we have shop parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('shop')) {
+            setTimeout(loadQuickStats, 1000);
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Settings - Festival Popup App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .card-header h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .card-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .card-body {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-col {
+            flex: 1;
+        }
+        
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .provider-option {
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .provider-option:hover {
+            border-color: #667eea;
+        }
+        
+        .provider-option.selected {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+        
+        .provider-option img {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .provider-option span {
+            display: block;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .custom-smtp {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .custom-smtp.show {
+            display: block;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .status-configured {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-not-configured {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .navigation {
+            margin-bottom: 30px;
+        }
+        
+        .navigation a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .navigation a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navigation">
+            <a href="index.html">← Back to Admin Dashboard</a>
+        </div>
+
+        <div class="header">
+            <h1>📧 Email Settings</h1>
+            <p>Configure your email settings to send newsletters and festival offers to your customers</p>
+        </div>
+
+        <div id="status-card" class="card">
+            <div class="card-body">
+                <div id="email-status" class="status-indicator status-not-configured">
+                    <div class="status-dot"></div>
+                    Email Not Configured
+                </div>
+                <p id="status-description">Set up your email configuration to start sending newsletters and festival offers to your customers.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Email Configuration</h2>
+                <p>Choose your email provider and enter your credentials</p>
+            </div>
+            <div class="card-body">
+                <form id="email-form">
+                    <div class="form-group">
+                        <label>Email Provider</label>
+                        <div class="provider-grid">
+                            <div class="provider-option" data-provider="gmail">
+                                <div style="font-size: 24px; margin-bottom: 8px;">📧</div>
+                                <span>Gmail</span>
+                            </div>
+                            <div class="provider-option" data-provider="outlook">
+                                <div style="font-size: 24px; margin-bottom: 8px;">📨</div>
+                                <span>Outlook</span>
+                            </div>
+                            <div class="provider-option" data-provider="yahoo">
+                                <div style="font-size: 24px; margin-bottom: 8px;">📩</div>
+                                <span>Yahoo</span>
+                            </div>
+                            <div class="provider-option" data-provider="custom">
+                                <div style="font-size: 24px; margin-bottom: 8px;">⚙️</div>
+                                <span>Custom SMTP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="fromEmail">From Email Address *</label>
+                                <input type="email" id="fromEmail" name="fromEmail" required placeholder="your-store@gmail.com">
+                                <div class="help-text">The email address that customers will see emails from</div>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="fromName">From Name *</label>
+                                <input type="text" id="fromName" name="fromName" required placeholder="Your Store Name">
+                                <div class="help-text">The name that customers will see in their inbox</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Email Password / App Password *</label>
+                        <input type="password" id="password" name="password" required placeholder="Enter your email password">
+                        <div class="help-text" id="password-help">
+                            For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>
+                        </div>
+                    </div>
+
+                    <div class="custom-smtp" id="custom-smtp-settings">
+                        <h4 style="margin-bottom: 15px;">Custom SMTP Settings</h4>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="smtpHost">SMTP Host *</label>
+                                    <input type="text" id="smtpHost" name="smtpHost" placeholder="smtp.yourdomain.com">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="smtpPort">SMTP Port *</label>
+                                    <input type="number" id="smtpPort" name="smtpPort" placeholder="587" min="1" max="65535">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="secure" name="secure" checked> Use SSL/TLS encryption
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">Save Email Settings</button>
+                        <button type="button" id="test-email-btn" class="btn btn-secondary" disabled>Send Test Email</button>
+                        <button type="button" id="disable-email-btn" class="btn btn-danger" style="display: none;">Remove Email</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Festival Email Templates</h2>
+                <p>Customize the email templates for festival notifications</p>
+            </div>
+            <div class="card-body">
+                <form id="template-form">
+                    <div class="form-group">
+                        <label for="emailSubject">Email Subject Template</label>
+                        <input type="text" id="emailSubject" name="emailSubject" placeholder="🎉 Special {{festivalName}} Offer from {{storeName}}!">
+                        <div class="help-text">Use {{festivalName}} and {{storeName}} as placeholders</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailMessage">Email Message Template</label>
+                        <textarea id="emailMessage" name="emailMessage" rows="4" placeholder="Celebrate {{festivalName}} with exclusive deals! Don't miss out on our special offers."></textarea>
+                        <div class="help-text">Use {{festivalName}} and {{storeName}} as placeholders</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="autoGenerate" name="autoGenerate"> Automatically send festival emails when new festivals are detected
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Template Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="test-email-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Send Test Email</h3>
+                <div class="form-group">
+                    <label for="testEmail">Test Email Address</label>
+                    <input type="email" id="testEmail" placeholder="Enter email to send test to">
+                </div>
+                <div class="btn-group">
+                    <button type="button" id="send-test-btn" class="btn btn-success">Send Test</button>
+                    <button type="button" id="cancel-test-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script>
+        // Get shop domain from URL parameter or use default
+        const urlParams = new URLSearchParams(window.location.search);
+        const shopDomain = urlParams.get('shop') || 'test-shop.myshopify.com';
+        
+        let selectedProvider = 'gmail';
+        let emailConfigured = false;
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEmailSettings();
+            setupEventListeners();
+        });
+
+        // Refresh settings when window gains focus (fixes sync with Shopify app)
+        window.addEventListener('focus', function() {
+            loadEmailSettings();
+        });
+        
+        function setupEventListeners() {
+            // Provider selection
+            document.querySelectorAll('.provider-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    selectProvider(this.dataset.provider);
+                });
+            });
+            
+            // Email form submission
+            document.getElementById('email-form').addEventListener('submit', saveEmailSettings);
+            
+            // Template form submission
+            document.getElementById('template-form').addEventListener('submit', saveTemplateSettings);
+            
+            // Test email button
+            document.getElementById('test-email-btn').addEventListener('click', showTestEmailModal);
+            
+            // Send test email
+            document.getElementById('send-test-btn').addEventListener('click', sendTestEmail);
+            
+            // Cancel test email
+            document.getElementById('cancel-test-btn').addEventListener('click', hideTestEmailModal);
+            
+            // Disable email button
+            document.getElementById('disable-email-btn').addEventListener('click', disableEmail);
+        }
+        
+        function selectProvider(provider) {
+            selectedProvider = provider;
+            
+            // Update UI
+            document.querySelectorAll('.provider-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.querySelector(`[data-provider="${provider}"]`).classList.add('selected');
+            
+            // Show/hide custom SMTP settings
+            const customSmtp = document.getElementById('custom-smtp-settings');
+            if (provider === 'custom') {
+                customSmtp.classList.add('show');
+            } else {
+                customSmtp.classList.remove('show');
+            }
+            
+            // Update password help text
+            const helpTexts = {
+                gmail: 'For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>',
+                outlook: 'For Outlook: Use your regular email password',
+                yahoo: 'For Yahoo: Use App Password. Generate one in your Yahoo account security settings',
+                custom: 'Enter the password for your custom SMTP server'
+            };
+            
+            document.getElementById('password-help').innerHTML = helpTexts[provider];
+        }
+        
+        async function loadEmailSettings() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}`);
+                const data = await response.json();
+                
+                if (data.success && data.settings) {
+                    const settings = data.settings;
+                    
+                    // Update status
+                    emailConfigured = settings.emailSettings.enabled;
+                    updateEmailStatus(emailConfigured, settings.emailSettings);
+                    
+                    if (emailConfigured) {
+                        // Populate form with existing settings
+                        document.getElementById('fromEmail').value = settings.emailSettings.fromEmail || '';
+                        document.getElementById('fromName').value = settings.emailSettings.fromName || '';
+                        document.getElementById('smtpHost').value = settings.emailSettings.smtpHost || '';
+                        document.getElementById('smtpPort').value = settings.emailSettings.smtpPort || '';
+                        document.getElementById('secure').checked = settings.emailSettings.secure !== false;
+                        
+                        // Select provider
+                        selectProvider(settings.emailSettings.provider || 'gmail');
+                        
+                        // Enable test button
+                        document.getElementById('test-email-btn').disabled = false;
+                        document.getElementById('disable-email-btn').style.display = 'inline-block';
+                    }
+                    
+                    // Load template settings
+                    if (settings.festivalSettings) {
+                        document.getElementById('emailSubject').value = settings.festivalSettings.emailTemplate?.subject || '';
+                        document.getElementById('emailMessage').value = settings.festivalSettings.emailTemplate?.message || '';
+                        document.getElementById('autoGenerate').checked = settings.festivalSettings.autoGenerate !== false;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Failed to load email settings:', error);
+                showAlert('Failed to load email settings', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function updateEmailStatus(configured, emailSettings) {
+            const statusElement = document.getElementById('email-status');
+            const descriptionElement = document.getElementById('status-description');
+            
+            if (configured) {
+                statusElement.className = 'status-indicator status-configured';
+                statusElement.innerHTML = '<div class="status-dot"></div>Email Configured';
+                descriptionElement.textContent = `Emails will be sent from: ${emailSettings.fromName} <${emailSettings.fromEmail}>`;
+            } else {
+                statusElement.className = 'status-indicator status-not-configured';
+                statusElement.innerHTML = '<div class="status-dot"></div>Email Not Configured';
+                descriptionElement.textContent = 'Set up your email configuration to start sending newsletters and festival offers to your customers.';
+            }
+        }
+        
+        async function saveEmailSettings(e) {
+            e.preventDefault();
+            
+            try {
+                showLoading(true);
+                
+                const formData = new FormData(e.target);
+                const emailData = {
+                    fromEmail: formData.get('fromEmail'),
+                    fromName: formData.get('fromName'),
+                    password: formData.get('password'),
+                    provider: selectedProvider,
+                    secure: formData.get('secure') === 'on'
+                };
+                
+                if (selectedProvider === 'custom') {
+                    emailData.smtpHost = formData.get('smtpHost');
+                    emailData.smtpPort = parseInt(formData.get('smtpPort'));
+                    
+                    if (!emailData.smtpHost || !emailData.smtpPort) {
+                        showAlert('SMTP host and port are required for custom provider', 'error');
+                        return;
+                    }
+                }
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}/email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(emailData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Email settings saved successfully!', 'success');
+                    emailConfigured = true;
+                    updateEmailStatus(true, data.settings.emailSettings);
+                    document.getElementById('test-email-btn').disabled = false;
+                    document.getElementById('disable-email-btn').style.display = 'inline-block';
+                    
+                    // Clear password field for security
+                    document.getElementById('password').value = '';
+                } else {
+                    showAlert(data.error || 'Failed to save email settings', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Failed to save email settings:', error);
+                showAlert('Failed to save email settings', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function saveTemplateSettings(e) {
+            e.preventDefault();
+            
+            try {
+                showLoading(true);
+                
+                const formData = new FormData(e.target);
+                const templateData = {
+                    subject: formData.get('emailSubject'),
+                    message: formData.get('emailMessage'),
+                    autoGenerate: formData.get('autoGenerate') === 'on'
+                };
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}/festival-template`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(templateData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Template settings saved successfully!', 'success');
+                } else {
+                    showAlert(data.error || 'Failed to save template settings', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Failed to save template settings:', error);
+                showAlert('Failed to save template settings', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function showTestEmailModal() {
+            if (!emailConfigured) {
+                showAlert('Please save email settings first', 'error');
+                return;
+            }
+            
+            document.getElementById('test-email-modal').style.display = 'flex';
+        }
+        
+        function hideTestEmailModal() {
+            document.getElementById('test-email-modal').style.display = 'none';
+            document.getElementById('testEmail').value = '';
+        }
+        
+        async function sendTestEmail() {
+            const testEmail = document.getElementById('testEmail').value;
+            
+            if (!testEmail) {
+                showAlert('Please enter a test email address', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}/email/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ testEmail })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Test email sent successfully! Check your inbox.', 'success');
+                    hideTestEmailModal();
+                } else {
+                    showAlert(data.error || 'Failed to send test email', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Failed to send test email:', error);
+                showAlert('Failed to send test email', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function disableEmail() {
+            if (!confirm('Are you sure you want to disable email functionality? Customers will no longer receive newsletters and festival offers.')) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}/email/disable`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Email functionality disabled', 'success');
+                    emailConfigured = false;
+                    updateEmailStatus(false, {});
+                    document.getElementById('test-email-btn').disabled = true;
+                    document.getElementById('disable-email-btn').style.display = 'none';
+                    
+                    // Clear form
+                    document.getElementById('email-form').reset();
+                } else {
+                    showAlert(data.error || 'Failed to disable email', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Failed to disable email:', error);
+                showAlert('Failed to disable email', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function showAlert(message, type) {
+            // Remove existing alerts
+            document.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.card'));
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+    </script>
+
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</body>
+</html> 

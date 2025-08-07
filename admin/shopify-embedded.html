@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Festival Campaigns</title>
+    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+    <script src="/ngrok-config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f6f6f7;
+            color: #202223;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            max-width: 100%;
+            padding: 24px;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #202223;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: #6d7175;
+            font-size: 14px;
+        }
+
+        .festivals-section {
+            margin-bottom: 32px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e1e3e5;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #202223;
+        }
+
+        .manage-button {
+            background: #008060;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .manage-button:hover {
+            background: #006d52;
+        }
+
+        .festival-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        }
+
+        .festival-card {
+            background: white;
+            border: 1px solid #e1e3e5;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .festival-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .festival-header {
+            padding: 16px;
+            border-bottom: 1px solid #f1f2f3;
+        }
+
+        .festival-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-upcoming {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .festival-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #202223;
+            margin-bottom: 4px;
+        }
+
+        .festival-offer {
+            color: #6d7175;
+            font-size: 14px;
+        }
+
+        .festival-body {
+            padding: 16px;
+        }
+
+        .festival-details {
+            margin-bottom: 16px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .detail-label {
+            color: #6d7175;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #202223;
+            font-weight: 500;
+        }
+
+        .festival-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #008060;
+            color: white;
+            border-color: #008060;
+        }
+
+        .btn-primary:hover {
+            background: #006d52;
+        }
+
+        .btn-danger {
+            background: #d72c0d;
+            color: white;
+            border-color: #d72c0d;
+        }
+
+        .btn-danger:hover {
+            background: #b02606;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #202223;
+            border-color: #c9cccf;
+        }
+
+        .btn-secondary:hover {
+            background: #f6f6f7;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            background: white;
+            border: 1px solid #e1e3e5;
+            border-radius: 12px;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #202223;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-text {
+            color: #6d7175;
+            margin-bottom: 24px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: #6d7175;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: white;
+            border: 1px solid #e1e3e5;
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 600;
+            color: #202223;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6d7175;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .email-config-card {
+            background: white;
+            border: 1px solid #e1e3e5;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .email-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .email-status.configured {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .email-status.not-configured {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .email-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #202223;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #c9cccf;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #008060;
+            box-shadow: 0 0 0 1px #008060;
+        }
+
+        .provider-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .provider-option {
+            padding: 12px;
+            border: 1px solid #c9cccf;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .provider-option:hover {
+            border-color: #008060;
+        }
+
+        .provider-option.selected {
+            border-color: #008060;
+            background: #f0f8f6;
+        }
+
+        .provider-option .icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .provider-option .name {
+            font-size: 12px;
+            font-weight: 500;
+            color: #202223;
+        }
+
+        .email-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn-email {
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-email.primary {
+            background: #008060;
+            color: white;
+            border-color: #008060;
+        }
+
+        .btn-email.primary:hover {
+            background: #006d52;
+        }
+
+        .btn-email.secondary {
+            background: white;
+            color: #202223;
+            border-color: #c9cccf;
+        }
+
+        .btn-email.secondary:hover {
+            border-color: #008060;
+        }
+
+        .btn-email.danger {
+            background: #d72c0d;
+            color: white;
+            border-color: #d72c0d;
+        }
+
+        .btn-email.danger:hover {
+            background: #b02a0b;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6d7175;
+            margin-top: 4px;
+        }
+
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #6d7175;
+        }
+
+        .success-message, .error-message, .info-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-message {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h3 {
+            margin: 0 0 16px 0;
+            color: #202223;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Quick Festival Setup Styles */
+        .quick-festival-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e1e3e5;
+            overflow: hidden;
+        }
+
+        .quick-festival-content {
+            padding: 24px;
+        }
+
+        .quick-festival-form {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #202223;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #c9cccf;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #008060;
+            box-shadow: 0 0 0 3px rgba(0, 128, 96, 0.1);
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6d7175;
+            margin-top: 4px;
+        }
+
+        .festival-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-festival {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-festival.primary {
+            background: #008060;
+            color: white;
+        }
+
+        .btn-festival.primary:hover {
+            background: #006d52;
+        }
+
+        .btn-festival.secondary {
+            background: #f6f6f7;
+            color: #202223;
+            border: 1px solid #c9cccf;
+        }
+
+        .btn-festival.secondary:hover {
+            background: #e8e8e9;
+        }
+
+        .generation-status {
+            background: #f0f8ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e1e3e5;
+            border-top: 2px solid #008060;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .festival-preview {
+            background: #f0f9f0;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .festival-preview h4 {
+            color: #2e7d32;
+            margin: 0 0 16px 0;
+            font-size: 16px;
+        }
+
+        .preview-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e8f5e9;
+        }
+
+        .preview-item:last-child {
+            border-bottom: none;
+        }
+
+        .preview-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .preview-value {
+            color: #666;
+            font-family: monospace;
+        }
+
+        /* Regional Preview Modal Styles */
+        .regional-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .regional-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .regional-modal h3 {
+            margin: 0 0 16px 0;
+            color: #202223;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .regional-modal .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6d7175;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .regional-modal .close-btn:hover {
+            color: #202223;
+        }
+
+        .regional-state-selector {
+            margin-bottom: 24px;
+        }
+
+        .regional-state-selector label {
+            display: block;
+            font-weight: 500;
+            color: #202223;
+            margin-bottom: 8px;
+        }
+
+        .regional-state-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #c9cccf;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .regional-preview-area {
+            border: 2px dashed #e1e3e5;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            color: #6d7175;
+            background: #f9f9f9;
+            margin-bottom: 24px;
+        }
+
+        .regional-preview-area.has-content {
+            border-color: #3b82f6;
+            background: #f0f8ff;
+            border-style: solid;
+        }
+
+        .regional-preview-popup {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e1e3e5;
+        }
+
+        .regional-festival-details {
+            background: #f6f6f7;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+
+        .regional-festival-details h4 {
+            margin: 0 0 12px 0;
+            color: #008060;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .regional-detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .regional-detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .regional-detail-label {
+            color: #6d7175;
+            font-weight: 500;
+        }
+
+        .regional-detail-value {
+            color: #202223;
+            font-weight: 500;
+        }
+
+        .regional-customization-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .customization-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .customization-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="page-header">
+            <h1 class="page-title">Festival Campaigns</h1>
+            <p class="page-subtitle">Manage your seasonal popup campaigns and offers</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <p>Loading festivals...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-festivals">0</div>
+                    <div class="stat-label">Total Festivals</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="active-festivals">0</div>
+                    <div class="stat-label">Active Now</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="total-subscribers">0</div>
+                    <div class="stat-label">Total Subscribers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="festival-subscribers">0</div>
+                    <div class="stat-label">Festival Subscribers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="blog-subscribers">0</div>
+                    <div class="stat-label">Blog Subscribers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="newsletters-sent">0</div>
+                    <div class="stat-label">Emails Sent</div>
+                </div>
+            </div>
+
+            <div class="festivals-section">
+                <div class="section-header">
+                    <h2 class="section-title">🎪 Quick Festival Setup</h2>
+                    <div style="font-size: 14px; color: #6d7175;">Create festival with just 3 fields - AI handles the rest!</div>
+                </div>
+                <div class="quick-festival-card">
+                    <div class="quick-festival-content">
+                        <p style="margin: 0 0 20px 0; color: #6d7175; font-size: 14px;">
+                            Enter your offer text and dates below. AI will automatically generate festival name, discount code, colors, and background image.
+                        </p>
+                        
+                        <form id="quick-festival-form" class="quick-festival-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="festival-offer">Festival Offer Text *</label>
+                                    <input type="text" id="festival-offer" name="festival-offer" 
+                                           placeholder="e.g., 50% OFF Everything" required>
+                                    <div class="help-text">What discount are you offering?</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="festival-start-date">Festival Start Date *</label>
+                                    <input type="date" id="festival-start-date" name="festival-start-date" required>
+                                    <div class="help-text">When should the festival begin?</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="festival-end-date">Festival End Date</label>
+                                    <input type="date" id="festival-end-date" name="festival-end-date">
+                                    <div class="help-text">Leave empty for infinite rolling festival</div>
+                                </div>
+                            </div>
+                            
+                            <div class="festival-actions">
+                                <button type="submit" class="btn-festival primary">
+                                    ✨ Generate Festival with AI
+                                </button>
+                                <button type="button" class="btn-festival secondary" onclick="clearQuickFestivalForm()">
+                                    Clear Form
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div id="festival-generation-status" class="generation-status" style="display: none;">
+                            <div class="status-content">
+                                <div class="loading-spinner"></div>
+                                <span id="generation-status-text">Generating festival with AI...</span>
+                            </div>
+                        </div>
+                        
+                        <div id="generated-festival-preview" class="festival-preview" style="display: none;">
+                            <h4>🎉 Festival Generated Successfully!</h4>
+                            <div id="preview-content"></div>
+                            <button type="button" class="btn-festival secondary" onclick="hideGeneratedPreview()">
+                                Close Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="festivals-section">
+                <div class="section-header">
+                    <h2 class="section-title">🎪 Active & Upcoming Festivals</h2>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="manage-button" onclick="showRegionalPreview()" style="background: #3b82f6;">
+                            🗺️ Preview Regional Variations
+                        </button>
+                        <a href="/admin" target="_blank" class="manage-button">
+                            ⚙️ Manage All Festivals
+                        </a>
+                    </div>
+                </div>
+                <div id="active-festivals-grid" class="festival-grid">
+                    <!-- Active festivals will be inserted here -->
+                </div>
+            </div>
+
+            <div class="festivals-section">
+                <div class="section-header">
+                    <h2 class="section-title">📅 Recent Festivals</h2>
+                </div>
+                <div id="recent-festivals-grid" class="festival-grid">
+                    <!-- Recent festivals will be inserted here -->
+                </div>
+            </div>
+
+            <div class="festivals-section">
+                <div class="section-header">
+                    <h2 class="section-title">📧 Email Configuration</h2>
+                    <a href="/admin/email-settings.html" target="_blank" class="manage-button" id="advanced-settings-link">
+                        ⚙️ Advanced Settings
+                    </a>
+                </div>
+                <div id="email-config-section">
+                    <!-- Email configuration will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regional Preview Modal -->
+    <div id="regional-preview-modal" class="regional-modal">
+        <div class="regional-modal-content">
+            <button class="close-btn" onclick="closeRegionalPreview()">&times;</button>
+            <h3>🗺️ Regional Festival Variations</h3>
+            <p style="margin: 0 0 20px 0; color: #6d7175; font-size: 14px;">
+                See how your active and upcoming festivals appear to users in different Indian states:
+            </p>
+
+            <div class="regional-state-selector">
+                <label for="regional-festival-select">Select a festival to preview:</label>
+                <select id="regional-festival-select" onchange="previewRegionalVariation()">
+                    <option value="">Loading festivals...</option>
+                </select>
+            </div>
+
+            <div class="regional-state-selector">
+                <label for="regional-state-select">Select a state:</label>
+                <select id="regional-state-select" onchange="previewRegionalVariation()">
+                    <option value="">Select a state...</option>
+                    <option value="Andhra Pradesh">Andhra Pradesh</option>
+                    <option value="Assam">Assam</option>
+                    <option value="Bihar">Bihar</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Haryana">Haryana</option>
+                    <option value="Himachal Pradesh">Himachal Pradesh</option>
+                    <option value="Jharkhand">Jharkhand</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="Kerala">Kerala</option>
+                    <option value="Madhya Pradesh">Madhya Pradesh</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Odisha">Odisha</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Rajasthan">Rajasthan</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                    <option value="Telangana">Telangana</option>
+                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                    <option value="West Bengal">West Bengal</option>
+                </select>
+            </div>
+
+            <div id="regional-preview-content" class="regional-preview-area">
+                <p>Select a state to see regional variations</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize App Bridge
+        const urlParams = new URLSearchParams(window.location.search);
+        const shop = urlParams.get('shop') || 'test-festival-popup.myshopify.com';
+        const host = urlParams.get('host');
+        
+        // API Configuration - Load from centralized config if available
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:3000/api' 
+            : (window.NGROK_CONFIG?.API_URL || 'https://eb9d3b8110c5.ngrok-free.app/api');
+
+        let app;
+        try {
+            app = window.shopify?.AppBridge?.createApp({
+                apiKey: '61f690c61dbdf4dfd9f84857a49f05c6',
+                host: host,
+                forceRedirect: true
+            });
+        } catch (error) {
+            console.log('App Bridge initialization failed:', error);
+        }
+
+        async function makeAuthenticatedRequest(url, options = {}) {
+            try {
+                // Build the full URL with API_BASE_URL but avoid double '/api'
+                let fullUrl;
+                if (url.startsWith('http')) {
+                    fullUrl = url;
+                } else if (url.startsWith('/')) {
+                    // If API_BASE_URL already ends with "/api" and the url also starts with "/api",
+                    // remove the duplicate prefix.
+                    if (API_BASE_URL.endsWith('/api') && url.startsWith('/api')) {
+                        fullUrl = `${API_BASE_URL}${url.substring(4)}`; // remove leading '/api'
+                    } else {
+                        fullUrl = `${API_BASE_URL}/${url}`;
+                    }
+                } else {
+                    fullUrl = `${API_BASE_URL}/${url}`;
+                }
+                
+                const separator = fullUrl.includes('?') ? '&' : '?';
+                fullUrl = `${fullUrl}${separator}shopDomain=${shop}`;
+                
+                const response = await fetch(fullUrl, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true',
+                        ...options.headers
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Request failed:', error);
+                throw error;
+            }
+        }
+
+        async function loadData() {
+            try {
+                // Load stats
+                const statsData = await makeAuthenticatedRequest('/api/stats');
+                if (statsData.success) {
+                    document.getElementById('total-subscribers').textContent = statsData.stats.totalSubscribers;
+                    document.getElementById('festival-subscribers').textContent = statsData.stats.festivalSubscribers;
+                    document.getElementById('blog-subscribers').textContent = statsData.stats.blogSubscribers;
+                    document.getElementById('newsletters-sent').textContent = statsData.stats.newslettersSent;
+                }
+
+                // Load festivals
+                const festivalsData = await makeAuthenticatedRequest('/api/popup-settings');
+                if (festivalsData.success && festivalsData.settings.festivals) {
+                    displayFestivals(festivalsData.settings.festivals);
+                }
+
+                // Load email configuration
+                await loadEmailConfiguration();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').innerHTML = '<p>Error loading data. Please check your connection.</p>';
+            }
+        }
+
+        function displayFestivals(festivals) {
+            const now = new Date();
+            const activeFestivals = [];
+            const recentFestivals = [];
+            let activeCount = 0;
+
+            festivals.forEach(festival => {
+                const startDate = new Date(festival.startDate);
+                const endDate = new Date(festival.endDate);
+                const isActive = now >= startDate && now <= endDate;
+                const isUpcoming = now < startDate;
+                
+                if (isActive) activeCount++;
+                
+                if (isActive || isUpcoming) {
+                    activeFestivals.push(festival);
+                } else {
+                    recentFestivals.push(festival);
+                }
+            });
+
+            // Update stats
+            document.getElementById('total-festivals').textContent = festivals.length;
+            document.getElementById('active-festivals').textContent = activeCount;
+
+            // Display active/upcoming festivals
+            const activeGrid = document.getElementById('active-festivals-grid');
+            if (activeFestivals.length === 0) {
+                activeGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎭</div>
+                        <h3 class="empty-state-title">No Active Festivals</h3>
+                        <p class="empty-state-text">Create seasonal campaigns to engage your customers with special offers.</p>
+                        <a href="/admin" target="_blank" class="btn btn-primary">Create Festival</a>
+                    </div>
+                `;
+            } else {
+                activeGrid.innerHTML = activeFestivals.map((festival, index) => createFestivalCard(festival, index)).join('');
+            }
+
+            // Display recent festivals (limited to 6)
+            const recentGrid = document.getElementById('recent-festivals-grid');
+            const recentToShow = recentFestivals.slice(0, 6);
+            if (recentToShow.length === 0) {
+                recentGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <h3 class="empty-state-title">No Previous Festivals</h3>
+                        <p class="empty-state-text">Past festival campaigns will appear here.</p>
+                    </div>
+                `;
+            } else {
+                recentGrid.innerHTML = recentToShow.map((festival, index) => createFestivalCard(festival, index)).join('');
+            }
+        }
+
+        function createFestivalCard(festival, index) {
+            const now = new Date();
+            const startDate = new Date(festival.startDate);
+            const endDate = new Date(festival.endDate);
+            
+            let status, statusClass;
+            if (now >= startDate && now <= endDate) {
+                status = 'Active';
+                statusClass = 'status-active';
+            } else if (now < startDate) {
+                status = 'Upcoming';
+                statusClass = 'status-upcoming';
+            } else {
+                status = 'Expired';
+                statusClass = 'status-expired';
+            }
+
+            return `
+                <div class="festival-card">
+                    <div class="festival-header">
+                        <div class="festival-status ${statusClass}">${status}</div>
+                        <div class="festival-name">${festival.name}</div>
+                        <div class="festival-offer">${festival.offer}</div>
+                    </div>
+                    <div class="festival-body">
+                        <div class="festival-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Start Date:</span>
+                                <span class="detail-value">${formatDate(festival.startDate)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">End Date:</span>
+                                <span class="detail-value">${formatDate(festival.endDate)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Discount Code:</span>
+                                <span class="detail-value">${festival.discountCode}</span>
+                            </div>
+                        </div>
+                        <div class="festival-actions">
+                            ${status !== 'Expired' ? `
+                                <a href="/admin#festival-${festival._id}" target="_blank" class="btn btn-secondary">
+                                    ✏️ Edit
+                                </a>
+                                <button class="btn btn-danger" onclick="removeFestival('${index}', '${festival.name}')">
+                                    🗑️ Remove
+                                </button>
+                            ` : `
+                                <span class="expired-notice" style="color: #666; font-size: 14px; font-style: italic;">
+                                    📅 Festival has ended
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        async function removeFestival(festivalId, festivalName) {
+            if (!confirm(`Are you sure you want to remove "${festivalName}"?`)) {
+                return;
+            }
+
+            try {
+                const result = await makeAuthenticatedRequest('/api/remove-festival', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        festivalId: festivalId,
+                        shopDomain: shop
+                    })
+                });
+
+                if (result.success) {
+                    alert('Festival removed successfully!');
+                    loadData(); // Refresh the data
+                } else {
+                    alert('Error removing festival: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error removing festival: ' + error.message);
+            }
+        }
+
+
+
+        // Email Configuration Functions
+        async function loadEmailConfiguration() {
+            const emailSection = document.getElementById('email-config-section');
+            emailSection.innerHTML = '<div class="loading-indicator">Loading email configuration...</div>';
+
+            try {
+                const emailData = await makeAuthenticatedRequest(`/api/shop-settings/${shop}/email`);
+                displayEmailConfiguration(emailData.success ? emailData.settings : null);
+            } catch (error) {
+                console.error('Error loading email configuration:', error);
+                displayEmailConfiguration(null);
+            }
+        }
+
+        function displayEmailConfiguration(settings) {
+            const emailSection = document.getElementById('email-config-section');
+            const isConfigured = settings && settings.enabled && settings.fromEmail;
+
+            emailSection.innerHTML = `
+                <div class="email-config-card">
+                    <div class="email-status ${isConfigured ? 'configured' : 'not-configured'}">
+                        <div class="status-dot"></div>
+                        ${isConfigured ? 'Email Configured' : 'Email Not Configured'}
+                    </div>
+                    
+                    ${isConfigured ? `
+                        <div style="margin-bottom: 16px;">
+                            <p style="margin: 0; color: #6d7175; font-size: 14px;">
+                                Emails will be sent from: <strong>${settings.fromName}</strong> &lt;${settings.fromEmail}&gt;
+                            </p>
+                            <p style="margin: 4px 0 0 0; color: #6d7175; font-size: 14px;">
+                                Provider: <strong>${settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1)}</strong>
+                            </p>
+                        </div>
+                    ` : `
+                        <div style="margin-bottom: 16px;">
+                            <p style="margin: 0; color: #6d7175; font-size: 14px;">
+                                Set up your email configuration to start sending newsletters and festival offers.
+                            </p>
+                        </div>
+                    `}
+
+                    <form class="email-form" onsubmit="saveEmailSettings(event)">
+                        <div class="provider-selector">
+                            <div class="provider-option ${(!settings || settings.provider === 'gmail') ? 'selected' : ''}" 
+                                 onclick="selectProvider('gmail')">
+                                <span class="icon">📧</span>
+                                <span class="name">Gmail</span>
+                            </div>
+                            <div class="provider-option ${(settings && settings.provider === 'outlook') ? 'selected' : ''}" 
+                                 onclick="selectProvider('outlook')">
+                                <span class="icon">📨</span>
+                                <span class="name">Outlook</span>
+                            </div>
+                            <div class="provider-option ${(settings && settings.provider === 'yahoo') ? 'selected' : ''}" 
+                                 onclick="selectProvider('yahoo')">
+                                <span class="icon">📩</span>
+                                <span class="name">Yahoo</span>
+                            </div>
+                            <div class="provider-option ${(settings && settings.provider === 'custom') ? 'selected' : ''}" 
+                                 onclick="selectProvider('custom')">
+                                <span class="icon">⚙️</span>
+                                <span class="name">Custom</span>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fromEmail">From Email *</label>
+                                <input type="email" id="fromEmail" name="fromEmail" 
+                                       value="${settings ? settings.fromEmail || '' : ''}" 
+                                       placeholder="your-store@gmail.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fromName">From Name *</label>
+                                <input type="text" id="fromName" name="fromName" 
+                                       value="${settings ? settings.fromName || '' : ''}" 
+                                       placeholder="Your Store Name" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Email Password / App Password *</label>
+                            <input type="password" id="password" name="password" 
+                                   placeholder="Enter your email password" required>
+                            <div class="help-text" id="password-help">
+                                For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>
+                            </div>
+                        </div>
+
+                        <div class="custom-smtp" id="custom-smtp-settings" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                            <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Custom SMTP Settings</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="smtpHost">SMTP Host *</label>
+                                    <input type="text" id="smtpHost" name="smtpHost" 
+                                           value="${settings ? settings.smtpHost || '' : ''}" 
+                                           placeholder="smtp.yourdomain.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="smtpPort">SMTP Port *</label>
+                                    <input type="number" id="smtpPort" name="smtpPort" 
+                                           value="${settings ? settings.smtpPort || '' : ''}" 
+                                           placeholder="587" min="1" max="65535">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="secure" name="secure" 
+                                           ${(!settings || settings.secure !== false) ? 'checked' : ''}> 
+                                    Use SSL/TLS encryption
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="email-actions">
+                            <button type="submit" class="btn-email primary">
+                                💾 Save Settings
+                            </button>
+                            <button type="button" class="btn-email secondary" onclick="showTestEmailModal()">
+                                📧 Send Test Email
+                            </button>
+                            ${isConfigured ? `
+                                <button type="button" class="btn-email danger" onclick="disableEmail()">
+                                    🚫 Remove Email
+                                </button>
+                            ` : ''}
+                        </div>
+                    </form>
+
+                    <div id="email-messages"></div>
+                </div>
+                
+                <!-- Test Email Modal -->
+                <div id="test-email-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <h3>Send Test Email</h3>
+                        <div class="form-group">
+                            <label for="testEmailAddress">Test Email Address</label>
+                            <input type="email" id="testEmailAddress" placeholder="Enter email to send test to" required>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn-email primary" onclick="sendTestEmail()">
+                                📧 Send Test
+                            </button>
+                            <button type="button" class="btn-email secondary" onclick="hideTestEmailModal()">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Set the selected provider
+            if (settings && settings.provider) {
+                selectProvider(settings.provider);
+            }
+        }
+
+        function selectProvider(provider) {
+            // Update UI
+            document.querySelectorAll('.provider-option').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`[onclick="selectProvider('${provider}')"]`).classList.add('selected');
+
+            // Show/hide custom SMTP settings
+            const customSmtpSection = document.getElementById('custom-smtp-settings');
+            if (customSmtpSection) {
+                if (provider === 'custom') {
+                    customSmtpSection.style.display = 'block';
+                } else {
+                    customSmtpSection.style.display = 'none';
+                }
+            }
+
+            // Update help text
+            const helpText = document.getElementById('password-help');
+            switch (provider) {
+                case 'gmail':
+                    helpText.innerHTML = 'For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>';
+                    break;
+                case 'outlook':
+                    helpText.textContent = 'For Outlook: Use your regular email password.';
+                    break;
+                case 'yahoo':
+                    helpText.textContent = 'For Yahoo: Use App Password, not your regular password.';
+                    break;
+                case 'custom':
+                    helpText.textContent = 'Enter your SMTP server password or API key.';
+                    break;
+            }
+        }
+
+        async function saveEmailSettings(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const selectedProvider = document.querySelector('.provider-option.selected .name').textContent.toLowerCase();
+            
+            const settings = {
+                fromEmail: formData.get('fromEmail'),
+                fromName: formData.get('fromName'),
+                password: formData.get('password'),
+                provider: selectedProvider
+            };
+
+            // Add custom SMTP settings if provider is custom
+            if (selectedProvider === 'custom') {
+                settings.smtpHost = formData.get('smtpHost');
+                settings.smtpPort = parseInt(formData.get('smtpPort'));
+                settings.secure = formData.get('secure') === 'on';
+                
+                // Validate custom SMTP settings
+                if (!settings.smtpHost || !settings.smtpPort) {
+                    showEmailMessage('SMTP host and port are required for custom provider.', 'error');
+                    return;
+                }
+                
+                if (settings.smtpPort < 1 || settings.smtpPort > 65535) {
+                    showEmailMessage('Invalid SMTP port number.', 'error');
+                    return;
+                }
+            }
+
+            showEmailMessage('Saving email settings...', 'info');
+
+            try {
+                const response = await makeAuthenticatedRequest(`/api/shop-settings/${shop}/email`, {
+                    method: 'POST',
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.success) {
+                    showEmailMessage('Email settings saved successfully!', 'success');
+                    // Reload the configuration to show updated status
+                    setTimeout(() => loadEmailConfiguration(), 1000);
+                } else {
+                    showEmailMessage(response.error || 'Failed to save email settings', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving email settings:', error);
+                showEmailMessage('Failed to save email settings. Please try again.', 'error');
+            }
+        }
+
+        function showTestEmailModal() {
+            const emailStatus = document.querySelector('.email-status');
+            if (!emailStatus || !emailStatus.classList.contains('configured')) {
+                showEmailMessage('Please save email settings first.', 'error');
+                return;
+            }
+            
+            document.getElementById('test-email-modal').style.display = 'flex';
+        }
+
+        function hideTestEmailModal() {
+            document.getElementById('test-email-modal').style.display = 'none';
+            document.getElementById('testEmailAddress').value = '';
+        }
+
+        async function sendTestEmail() {
+            const testEmail = document.getElementById('testEmailAddress').value;
+            
+            if (!testEmail) {
+                showEmailMessage('Please enter a test email address.', 'error');
+                return;
+            }
+
+            showEmailMessage('Sending test email...', 'info');
+
+            try {
+                const response = await makeAuthenticatedRequest(`/api/shop-settings/${shop}/email/test`, {
+                    method: 'POST',
+                    body: JSON.stringify({ testEmail: testEmail })
+                });
+
+                if (response.success) {
+                    hideTestEmailModal();
+                    showEmailMessage('Test email sent successfully! Check your inbox.', 'success');
+                } else {
+                    hideTestEmailModal();
+                    showEmailMessage('Unable to send email', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending test email:', error);
+                hideTestEmailModal();
+                showEmailMessage('Unable to send email', 'error');
+            }
+        }
+
+        async function disableEmail() {
+            if (!confirm('Are you sure you want to disable email functionality? Customers will no longer receive newsletters and festival offers.')) {
+                return;
+            }
+
+            showEmailMessage('Disabling email functionality...', 'info');
+
+            try {
+                const response = await makeAuthenticatedRequest(`/api/shop-settings/${shop}/email/disable`, {
+                    method: 'POST'
+                });
+
+                if (response.success) {
+                    showEmailMessage('Email functionality disabled successfully.', 'success');
+                    // Reload the configuration to show updated status
+                    setTimeout(() => loadEmailConfiguration(), 1000);
+                } else {
+                    showEmailMessage(response.error || 'Failed to disable email', 'error');
+                }
+            } catch (error) {
+                console.error('Error disabling email:', error);
+                showEmailMessage('Failed to disable email functionality.', 'error');
+            }
+        }
+
+        function showEmailMessage(message, type) {
+            const messagesDiv = document.getElementById('email-messages');
+            const messageClass = type === 'success' ? 'success-message' : 
+                                type === 'error' ? 'error-message' : 'info-message';
+            
+            messagesDiv.innerHTML = `<div class="${messageClass}">${message}</div>`;
+            
+            // Clear message after 8 seconds for success/info messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    messagesDiv.innerHTML = '';
+                }, 8000);
+            }
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(loadData, 500);
+        });
+
+        // Set dynamic Advanced Settings link with shop parameter
+        document.addEventListener('DOMContentLoaded', function() {
+            const advLink = document.getElementById('advanced-settings-link');
+            if (advLink) {
+                advLink.href = `/admin/email-settings.html?shop=${shop}`;
+            }
+
+            // Initialize Quick Festival Setup
+            initializeQuickFestivalSetup();
+        });
+
+        // Quick Festival Setup Functions
+        function initializeQuickFestivalSetup() {
+            const form = document.getElementById('quick-festival-form');
+            if (form) {
+                form.addEventListener('submit', handleQuickFestivalSubmit);
+            }
+
+            // Set minimum date to today for date inputs
+            const today = new Date().toISOString().split('T')[0];
+            const startDateInput = document.getElementById('festival-start-date');
+            const endDateInput = document.getElementById('festival-end-date');
+            
+            if (startDateInput) {
+                startDateInput.min = today;
+            }
+            if (endDateInput) {
+                endDateInput.min = today;
+            }
+
+            // Add date validation
+            if (startDateInput && endDateInput) {
+                startDateInput.addEventListener('change', validateDates);
+                endDateInput.addEventListener('change', validateDates);
+            }
+        }
+
+        function validateDates() {
+            const startDate = document.getElementById('festival-start-date').value;
+            const endDate = document.getElementById('festival-end-date').value;
+            
+            if (startDate && endDate && endDate < startDate) {
+                document.getElementById('festival-end-date').setCustomValidity('End date must be after start date');
+            } else {
+                document.getElementById('festival-end-date').setCustomValidity('');
+            }
+        }
+
+        async function handleQuickFestivalSubmit(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const festivalData = {
+                offer: formData.get('festival-offer').trim(),
+                startDate: formData.get('festival-start-date'),
+                endDate: formData.get('festival-end-date') || null,
+                isInfinite: !formData.get('festival-end-date')
+            };
+
+            // Validation
+            if (!festivalData.offer) {
+                showQuickFestivalMessage('Please enter festival offer text', 'error');
+                return;
+            }
+            if (!festivalData.startDate) {
+                showQuickFestivalMessage('Please select festival start date', 'error');
+                return;
+            }
+
+            // Check for past dates
+            const today = new Date().toISOString().split('T')[0];
+            if (festivalData.startDate < today) {
+                showQuickFestivalMessage('Start date cannot be in the past', 'error');
+                return;
+            }
+            if (festivalData.endDate && festivalData.endDate < today) {
+                showQuickFestivalMessage('End date cannot be in the past', 'error');
+                return;
+            }
+
+            try {
+                showQuickFestivalStatus('Generating festival with AI...', true);
+                
+                const response = await fetch(`/api/app-embeds/generate-festival/${shop}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify(festivalData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showQuickFestivalStatus('Festival generated successfully!', false);
+                    showGeneratedFestivalPreview(result.festival);
+                    clearQuickFestivalForm();
+                    
+                    // Refresh the festivals list
+                    setTimeout(() => {
+                        loadData();
+                    }, 1000);
+                    
+                    showQuickFestivalMessage('🎉 Festival created successfully! Check the preview below.', 'success');
+                } else {
+                    throw new Error(result.error || 'Festival generation failed');
+                }
+                
+            } catch (error) {
+                console.error('Quick Festival Setup Error:', error);
+                showQuickFestivalStatus('', false);
+                showQuickFestivalMessage('Failed to generate festival: ' + error.message, 'error');
+            }
+        }
+
+        function showQuickFestivalStatus(message, show) {
+            const statusDiv = document.getElementById('festival-generation-status');
+            const statusText = document.getElementById('generation-status-text');
+            
+            if (show && message) {
+                statusText.textContent = message;
+                statusDiv.style.display = 'block';
+            } else {
+                statusDiv.style.display = 'none';
+            }
+        }
+
+        function showQuickFestivalMessage(message, type) {
+            // Create or update message element
+            let messageDiv = document.getElementById('quick-festival-message');
+            if (!messageDiv) {
+                messageDiv = document.createElement('div');
+                messageDiv.id = 'quick-festival-message';
+                messageDiv.style.cssText = `
+                    margin-top: 16px;
+                    padding: 12px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                `;
+                document.querySelector('.quick-festival-content').appendChild(messageDiv);
+            }
+            
+            // Set message style based on type
+            const styles = {
+                success: 'background: #e8f5e8; color: #2e7d32; border: 1px solid #4caf50;',
+                error: 'background: #ffebee; color: #c62828; border: 1px solid #f44336;',
+                info: 'background: #e3f2fd; color: #1565c0; border: 1px solid #2196f3;'
+            };
+            
+            messageDiv.style.cssText += styles[type] || styles.info;
+            messageDiv.textContent = message;
+            
+            // Auto-hide success/info messages after 5 seconds
+            if (type !== 'error') {
+                setTimeout(() => {
+                    if (messageDiv && messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 5000);
+            }
+        }
+
+        function showGeneratedFestivalPreview(festival) {
+            const previewDiv = document.getElementById('generated-festival-preview');
+            const previewContent = document.getElementById('preview-content');
+            
+            previewContent.innerHTML = `
+                <div class="preview-item">
+                    <span class="preview-label">Festival Name:</span>
+                    <span class="preview-value">${festival.name}</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">Discount Code:</span>
+                    <span class="preview-value">${festival.discountCode}</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">Offer:</span>
+                    <span class="preview-value">${festival.offer}</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">Start Date:</span>
+                    <span class="preview-value">${new Date(festival.startDate).toLocaleDateString()}</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">End Date:</span>
+                    <span class="preview-value">${festival.endDate ? new Date(festival.endDate).toLocaleDateString() : 'Infinite Rolling'}</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">Background Color:</span>
+                    <span class="preview-value" style="background: ${festival.backgroundColor}; color: ${festival.textColor}; padding: 4px 8px; border-radius: 4px;">
+                        ${festival.backgroundColor}
+                    </span>
+                </div>
+            `;
+            
+            previewDiv.style.display = 'block';
+        }
+
+        function hideGeneratedPreview() {
+            document.getElementById('generated-festival-preview').style.display = 'none';
+        }
+
+        function clearQuickFestivalForm() {
+            document.getElementById('quick-festival-form').reset();
+            hideGeneratedPreview();
+            
+            // Remove any existing message
+            const messageDiv = document.getElementById('quick-festival-message');
+            if (messageDiv && messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }
+
+        // Regional Preview Functions
+        async function showRegionalPreview() {
+            document.getElementById('regional-preview-modal').style.display = 'flex';
+            await loadFestivalsForRegionalPreview();
+        }
+
+        function closeRegionalPreview() {
+            document.getElementById('regional-preview-modal').style.display = 'none';
+            document.getElementById('regional-festival-select').value = '';
+            document.getElementById('regional-state-select').value = '';
+            document.getElementById('regional-preview-content').innerHTML = '<p>Select a festival and state to see regional variations</p>';
+            document.getElementById('regional-preview-content').className = 'regional-preview-area';
+        }
+
+        async function loadFestivalsForRegionalPreview() {
+            const festivalSelect = document.getElementById('regional-festival-select');
+            
+            try {
+                // Get current festivals
+                const festivalsData = await makeAuthenticatedRequest('/api/popup-settings');
+                
+                if (!festivalsData.success || !festivalsData.settings.festivals || festivalsData.settings.festivals.length === 0) {
+                    festivalSelect.innerHTML = '<option value="">No festivals available</option>';
+                    return;
+                }
+
+                // Categorize festivals
+                const now = new Date();
+                const activeFestivals = [];
+                const upcomingFestivals = [];
+                
+                festivalsData.settings.festivals.forEach(festival => {
+                    const startDate = new Date(festival.startDate);
+                    const endDate = new Date(festival.endDate);
+                    
+                    if (now >= startDate && now <= endDate) {
+                        activeFestivals.push(festival);
+                    } else if (now < startDate) {
+                        upcomingFestivals.push(festival);
+                    }
+                });
+
+                // Populate dropdown
+                let options = '<option value="">Select a festival...</option>';
+                
+                if (activeFestivals.length > 0) {
+                    options += '<optgroup label="🟢 Active Festivals">';
+                    activeFestivals.forEach((festival, localIndex) => {
+                        const endDate = new Date(festival.endDate).toLocaleDateString();
+                        // Use the actual index in the full festivals array
+                        const globalIndex = festivalsData.settings.festivals.indexOf(festival);
+                        options += `<option value="${globalIndex}">🟢 ${festival.name} (ends ${endDate})</option>`;
+                    });
+                    options += '</optgroup>';
+                }
+                
+                if (upcomingFestivals.length > 0) {
+                    options += '<optgroup label="🔵 Upcoming Festivals">';
+                    upcomingFestivals.forEach((festival, localIndex) => {
+                        const startDate = new Date(festival.startDate).toLocaleDateString();
+                        // Use the actual index in the full festivals array
+                        const globalIndex = festivalsData.settings.festivals.indexOf(festival);
+                        options += `<option value="${globalIndex}">🔵 ${festival.name} (starts ${startDate})</option>`;
+                    });
+                    options += '</optgroup>';
+                }
+                
+                if (activeFestivals.length === 0 && upcomingFestivals.length === 0) {
+                    options += '<option value="">No active or upcoming festivals</option>';
+                }
+                
+                festivalSelect.innerHTML = options;
+                
+            } catch (error) {
+                console.error('Error loading festivals for regional preview:', error);
+                festivalSelect.innerHTML = '<option value="">Error loading festivals</option>';
+            }
+        }
+
+        async function previewRegionalVariation() {
+            const selectedFestivalId = document.getElementById('regional-festival-select').value;
+            const selectedState = document.getElementById('regional-state-select').value;
+            const previewContent = document.getElementById('regional-preview-content');
+            
+            if (!selectedFestivalId || !selectedState) {
+                previewContent.innerHTML = '<p>Select both a festival and state to see regional variations</p>';
+                previewContent.className = 'regional-preview-area';
+                return;
+            }
+
+            try {
+                // Show loading state
+                previewContent.innerHTML = '<p>Loading regional preview...</p>';
+                previewContent.className = 'regional-preview-area';
+                
+                // Get current festivals
+                const festivalsData = await makeAuthenticatedRequest('/api/popup-settings');
+                
+                if (!festivalsData.success || !festivalsData.settings.festivals || festivalsData.settings.festivals.length === 0) {
+                    previewContent.innerHTML = `
+                        <div style="text-align: center; color: #6d7175;">
+                            <p><strong>No Festivals Found</strong></p>
+                            <p>Create some festivals first to see regional variations.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Find the selected festival - Compatible with both MongoDB and file-based storage
+                let festivalToPreview;
+                
+                // Simple approach: use array index directly since that's what the dropdown uses
+                const festivalIndex = parseInt(selectedFestivalId);
+                if (!isNaN(festivalIndex) && festivalIndex >= 0 && festivalIndex < festivalsData.settings.festivals.length) {
+                    festivalToPreview = festivalsData.settings.festivals[festivalIndex];
+                } else {
+                    // Fallback: try to find by _id (MongoDB) or name
+                    festivalToPreview = festivalsData.settings.festivals.find(festival => 
+                        (festival._id && festival._id === selectedFestivalId) ||
+                        festival.name === selectedFestivalId
+                    );
+                }
+
+                if (!festivalToPreview) {
+                    previewContent.innerHTML = `
+                        <div style="text-align: center; color: #d72c0d;">
+                            <p><strong>Festival Not Found</strong></p>
+                            <p>The selected festival could not be found.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Get regional data for this festival
+                const regionalResponse = await fetch(`${API_BASE_URL}/location/festival/${shop}?state=${encodeURIComponent(selectedState)}&festivalName=${encodeURIComponent(festivalToPreview.name)}`, {
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+
+                if (!regionalResponse.ok) {
+                    throw new Error(`HTTP error! status: ${regionalResponse.status}`);
+                }
+
+                const regionalData = await regionalResponse.json();
+                
+                // Check if API call was successful
+                if (!regionalData.success) {
+                    previewContent.innerHTML = `
+                        <div style="text-align: center; color: #d72c0d;">
+                            <p><strong>Festival Not Found</strong></p>
+                            <p>${regionalData.message || 'The selected festival could not be found.'}</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Display the preview
+                displayRegionalPreview(selectedState, festivalToPreview, regionalData);
+
+            } catch (error) {
+                console.error('Error loading regional preview:', error);
+                previewContent.innerHTML = `
+                    <div style="text-align: center; color: #d72c0d;">
+                        <p><strong>Error Loading Preview</strong></p>
+                        <p>Failed to load regional data. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayRegionalPreview(selectedState, originalFestival, regionalData) {
+            const previewContent = document.getElementById('regional-preview-content');
+            
+            const isCustomized = regionalData.isRegional && regionalData.festival.name !== originalFestival.name;
+            
+            // Determine festival status
+            const now = new Date();
+            const startDate = new Date(originalFestival.startDate);
+            const endDate = new Date(originalFestival.endDate);
+            let festivalStatus = '';
+            let statusStyle = '';
+            
+            if (now >= startDate && now <= endDate) {
+                festivalStatus = '🟢 Active Festival';
+                statusStyle = 'color: #4caf50; font-weight: 600;';
+            } else if (now < startDate) {
+                festivalStatus = '🔵 Upcoming Festival';
+                statusStyle = 'color: #2196f3; font-weight: 600;';
+            } else {
+                festivalStatus = '⚫ Past Festival';
+                statusStyle = 'color: #666; font-weight: 600;';
+            }
+            
+            // Determine background image and style
+            const backgroundImageUrl = (regionalData.isRegional && regionalData.festival.backgroundImageUrl) ? 
+                regionalData.festival.backgroundImageUrl : originalFestival.backgroundImageUrl;
+            
+            const backgroundStyle = backgroundImageUrl ? 
+                `background-image: url('${backgroundImageUrl}'); background-size: cover; background-position: center; background-repeat: no-repeat;` : 
+                `background: ${regionalData.festival.backgroundColor || originalFestival.backgroundColor};`;
+            
+            previewContent.className = 'regional-preview-area has-content';
+            previewContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 16px 0;">
+                    <h4 style="margin: 0; color: #202223;">${selectedState} Variation</h4>
+                    <span style="${statusStyle} font-size: 14px;">${festivalStatus}</span>
+                </div>
+                
+                <div class="regional-preview-popup">
+                    <div style="${backgroundStyle} color: ${regionalData.festival.textColor || originalFestival.textColor || '#ffffff'}; padding: 24px; text-align: center; position: relative; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 8px;">
+                        ${backgroundImageUrl ? '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); border-radius: 8px;"></div>' : ''}
+                        <div style="position: relative; z-index: 1; width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center;">
+                            <h3 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: ${regionalData.festival.textColor || originalFestival.textColor || '#ffffff'}; text-shadow: ${backgroundImageUrl ? '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 1px -1px 2px rgba(0,0,0,0.8), -1px 1px 2px rgba(0,0,0,0.8)' : 'none'}; text-align: center; line-height: 1.2; align-self: center;">${regionalData.festival.name} Special!</h3>
+                                                          <p style="margin: 0 0 16px 0; font-size: 26px; font-weight: bold; color: ${regionalData.festival.textColor || originalFestival.textColor || '#ffffff'}; text-shadow: ${backgroundImageUrl ? '2px 2px 4px rgba(0,0,0,0.9), -2px -2px 4px rgba(0,0,0,0.9), 2px -2px 4px rgba(0,0,0,0.9), -2px 2px 4px rgba(0,0,0,0.9)' : 'none'}; text-align: center; line-height: 1.1;">${regionalData.festival.offer || originalFestival.offer}</p>
+                              <p style="margin: 0 0 16px 0; font-size: 14px; color: ${regionalData.festival.textColor || originalFestival.textColor || '#ffffff'}; text-shadow: ${backgroundImageUrl ? '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 1px -1px 2px rgba(0,0,0,0.8), -1px 1px 2px rgba(0,0,0,0.8)' : 'none'}; text-align: center;">Use code at checkout</p>
+                            <div style="background: rgba(255,255,255,0.95); color: #333; padding: 10px 20px; border-radius: 6px; display: inline-block; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-size: 16px; letter-spacing: 1px;">
+                                ${regionalData.festival.discountCode || originalFestival.discountCode}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="regional-festival-details">
+                    <div class="regional-customization-status ${isCustomized ? 'customization-active' : 'customization-inactive'}">
+                        ${isCustomized ? '✅ Regional Customization Active' : '❌ No Regional Customization'}
+                    </div>
+                    
+                    <h4>Festival Details</h4>
+                    <div class="regional-detail-row">
+                        <span class="regional-detail-label">Original:</span>
+                        <span class="regional-detail-value">${originalFestival.name}</span>
+                    </div>
+                    <div class="regional-detail-row">
+                        <span class="regional-detail-label">Regional:</span>
+                        <span class="regional-detail-value">${regionalData.festival.name}</span>
+                    </div>
+                    <div class="regional-detail-row">
+                        <span class="regional-detail-label">Region:</span>
+                        <span class="regional-detail-value">${selectedState}</span>
+                    </div>
+                    <div class="regional-detail-row">
+                        <span class="regional-detail-label">Offer:</span>
+                        <span class="regional-detail-value">${regionalData.festival.offer || originalFestival.offer}</span>
+                    </div>
+                    <div class="regional-detail-row">
+                        <span class="regional-detail-label">Discount Code:</span>
+                        <span class="regional-detail-value">${regionalData.festival.discountCode || originalFestival.discountCode}</span>
+                    </div>
+                    <div class="regional-detail-row">
+                        <span class="regional-detail-label">Background:</span>
+                        <span class="regional-detail-value">
+                            ${regionalData.isRegional && regionalData.festival.backgroundImageUrl ? 'Custom AI-generated image' : (originalFestival.backgroundImageUrl ? 'Custom AI-generated image' : 'Default background')}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'regional-preview-modal') {
+                closeRegionalPreview();
+            }
+        });
+    </script>
+</body>
+</html> 

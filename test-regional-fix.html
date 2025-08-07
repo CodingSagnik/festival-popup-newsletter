@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Regional Festival Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Regional Festival Fix Test</h1>
+        
+        <div class="test-section">
+            <h3>Test 1: Load Festivals</h3>
+            <button onclick="testLoadFestivals()">Load Festivals</button>
+            <div id="festivals-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test 2: Regional Festival API</h3>
+            <button onclick="testRegionalAPI()">Test Regional API</button>
+            <div id="regional-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test 3: Simulate Shopify App Settings</h3>
+            <select id="festival-select">
+                <option value="">Select a festival...</option>
+            </select>
+            <select id="state-select">
+                <option value="">Select a state...</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Karnataka">Karnataka</option>
+            </select>
+            <button onclick="testShopifyAppSettings()">Preview Regional Variation</button>
+            <div id="shopify-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            shopDomain: 'test-festival-popup.myshopify.com',
+            apiBaseUrl: 'http://localhost:3000/api',
+            festivals: []
+        };
+
+        async function testLoadFestivals() {
+            const resultDiv = document.getElementById('festivals-result');
+            try {
+                resultDiv.innerHTML = '🔄 Loading festivals...';
+                
+                const response = await fetch(`${CONFIG.apiBaseUrl}/popup/${CONFIG.shopDomain}`);
+                const data = await response.json();
+                
+                CONFIG.festivals = data.festivals || [];
+                
+                // Populate festival dropdown
+                const festivalSelect = document.getElementById('festival-select');
+                festivalSelect.innerHTML = '<option value="">Select a festival...</option>';
+                CONFIG.festivals.forEach((festival, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${festival.name} (ends ${festival.endDate})`;
+                    festivalSelect.appendChild(option);
+                });
+                
+                resultDiv.innerHTML = `<div class="success">✅ Loaded ${CONFIG.festivals.length} festivals</div>`;
+                resultDiv.innerHTML += `<pre>${JSON.stringify(CONFIG.festivals, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testRegionalAPI() {
+            const resultDiv = document.getElementById('regional-result');
+            try {
+                resultDiv.innerHTML = '🔄 Testing regional API...';
+                
+                const response = await fetch(`${CONFIG.apiBaseUrl}/location/festival/${CONFIG.shopDomain}?state=Maharashtra&festivalName=Seasonal Celebration`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="success">✅ API Success</div>`;
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ API returned success: false - ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testShopifyAppSettings() {
+            const resultDiv = document.getElementById('shopify-result');
+            const festivalIndex = document.getElementById('festival-select').value;
+            const state = document.getElementById('state-select').value;
+            
+            if (!festivalIndex || !state) {
+                resultDiv.innerHTML = '<div class="error">❌ Please select both festival and state</div>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = '🔄 Simulating Shopify App Settings...';
+                
+                const festival = CONFIG.festivals[festivalIndex];
+                if (!festival) {
+                    throw new Error('Festival not found');
+                }
+
+                console.log('🗺️ Getting regional variation for:', festival.name, 'in', state);
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/location/festival/${CONFIG.shopDomain}?state=${encodeURIComponent(state)}&festivalName=${encodeURIComponent(festival.name)}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Check if API call was successful (this is the fix!)
+                if (!data.success) {
+                    throw new Error(data.message || 'Festival not found');
+                }
+                
+                resultDiv.innerHTML = `<div class="success">✅ Shopify App Settings Simulation Success!</div>`;
+                resultDiv.innerHTML += `<p><strong>Original Festival:</strong> ${festival.name}</p>`;
+                resultDiv.innerHTML += `<p><strong>Regional Festival:</strong> ${data.festival.name}</p>`;
+                resultDiv.innerHTML += `<p><strong>State:</strong> ${state}</p>`;
+                resultDiv.innerHTML += `<p><strong>Is Regional:</strong> ${data.isRegional ? 'Yes' : 'No'}</p>`;
+                resultDiv.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+            } catch (error) {
+                console.error('❌ Error getting regional variation:', error);
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-load festivals on page load
+        window.addEventListener('load', testLoadFestivals);
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+node_modules/
+.env
+data/
+test-*.js
+add-blog-subscribers.js
+*.log
+.DS_Store
+Thumbs.db
+festival-newsletter-popup/
+.git/
+.vscode/
+*.md
+.env.shopify

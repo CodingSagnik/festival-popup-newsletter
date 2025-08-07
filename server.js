@@ -20,6 +20,16 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
+// Health check endpoint for Railway
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Festival Popup & Newsletter System is running!',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
 // Serve ngrok config for frontend
 app.get('/ngrok-config.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'ngrok-config.js'));

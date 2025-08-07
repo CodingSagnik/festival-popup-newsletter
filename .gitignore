@@ -1,5 +1,10 @@
 node_modules/
 .env
+.env.*
+.env.shopify
+.env.local
+.env.production
+.env.development
 data/
 test-*.js
 add-blog-subscribers.js

@@ -11,4 +11,4 @@ add-blog-subscribers.js
 *.log
 .DS_Store
 Thumbs.db
-festival-newsletter-popup/
+# festival-newsletter-popup/ - Now tracking extension files for deployment

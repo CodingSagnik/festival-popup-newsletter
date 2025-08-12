@@ -20,14 +20,14 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
-// Main app route - serve admin panel for Shopify
+// Main app route - serve Shopify-embedded admin interface
 app.get('/', (req, res) => {
   // Check if this is a Shopify app request (has shop parameter or Shopify headers)
   const isShopifyRequest = req.query.shop || req.headers['x-shopify-shop-domain'] || req.headers.referer?.includes('shopify');
   
   if (isShopifyRequest) {
-    // Serve admin panel for Shopify app
-    res.sendFile(path.join(__dirname, 'admin', 'index.html'));
+    // Serve Shopify-embedded admin interface
+    res.sendFile(path.join(__dirname, 'admin', 'shopify-embedded.html'));
   } else {
     // Serve health check for other requests (Railway health checks, etc.)
     res.json({ 

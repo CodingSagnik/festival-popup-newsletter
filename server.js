@@ -20,8 +20,27 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
-// Health check endpoint for Railway
+// Main app route - serve admin panel for Shopify
 app.get('/', (req, res) => {
+  // Check if this is a Shopify app request (has shop parameter or Shopify headers)
+  const isShopifyRequest = req.query.shop || req.headers['x-shopify-shop-domain'] || req.headers.referer?.includes('shopify');
+  
+  if (isShopifyRequest) {
+    // Serve admin panel for Shopify app
+    res.sendFile(path.join(__dirname, 'admin', 'index.html'));
+  } else {
+    // Serve health check for other requests (Railway health checks, etc.)
+    res.json({ 
+      status: 'OK', 
+      message: 'Festival Popup & Newsletter System is running!',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0'
+    });
+  }
+});
+
+// Health check endpoint for Railway (backup)
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Festival Popup & Newsletter System is running!',

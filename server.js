@@ -14,8 +14,18 @@ const ColorThief = require('colorthief');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Middleware - Enhanced CORS for Shopify
+app.use(cors({
+  origin: [
+    'https://test-festival-popup.myshopify.com',
+    'https://*.myshopify.com',
+    'http://localhost:3000',
+    'https://web-production-18602.up.railway.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Accept', 'Cache-Control', 'Pragma', 'Expires']
+}));
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));

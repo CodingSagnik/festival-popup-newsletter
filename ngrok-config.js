@@ -1,13 +1,13 @@
 /**
- * 🔧 NGROK CONFIGURATION - UPDATE ONLY THIS FILE!
+ * 🔧 SERVER CONFIGURATION - UPDATE ONLY THIS FILE!
  * 
- * When your ngrok URL changes, just update the NGROK_URL below.
+ * When your server URL changes, just update the NGROK_URL below.
  * All other files will automatically use this configuration.
  */
 
 const NGROK_CONFIG = {
-  // 🚨 UPDATE THIS WHEN YOUR NGROK URL CHANGES
-  NGROK_URL: 'https://fc1d496cf610.ngrok-free.app',
+  // 🚨 UPDATE THIS WHEN YOUR DEPLOYMENT URL CHANGES
+  NGROK_URL: 'https://web-production-18602.up.railway.app',
   
   // Derived URLs (automatically calculated)
   get API_URL() {

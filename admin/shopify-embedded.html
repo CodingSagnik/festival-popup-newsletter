@@ -1017,7 +1017,7 @@
         // API Configuration - Load from centralized config if available
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:3000/api' 
-            : (window.NGROK_CONFIG?.API_URL || 'https://eb9d3b8110c5.ngrok-free.app/api');
+            : (window.NGROK_CONFIG?.API_URL || 'https://web-production-18602.up.railway.app/api');
 
         let app;
         try {

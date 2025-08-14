@@ -1405,12 +1405,65 @@ app.get('/admin', (req, res) => {
 });
 
 // ==================== NEWSLETTER ANALYTICS API ENDPOINT ====================
+// Initialize sample data for new deployments
+async function initializeSampleDataIfNeeded(shopDomain) {
+  try {
+    // Check if any subscribers exist
+    const existingSubscribers = await NewsletterSubscriber.find({ shopDomain });
+    
+    if (existingSubscribers.length === 0) {
+      console.log(`🔧 No subscribers found for ${shopDomain}, creating sample data...`);
+      
+      // Create sample subscribers
+      const sampleSubscribers = [
+        {
+          email: 'festival-lover@example.com',
+          shopDomain: shopDomain,
+          subscribedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+          isActive: true,
+          subscriptionType: 'festival',
+          preferences: { festivals: true, offers: true, blogUpdates: false }
+        },
+        {
+          email: 'blog-reader@example.com',
+          shopDomain: shopDomain,
+          subscribedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+          isActive: true,
+          subscriptionType: 'blog',
+          preferences: { festivals: false, offers: false, blogUpdates: true }
+        },
+        {
+          email: 'all-updates@example.com',
+          shopDomain: shopDomain,
+          subscribedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+          isActive: true,
+          subscriptionType: 'festival',
+          preferences: { festivals: true, offers: true, blogUpdates: true }
+        }
+      ];
+      
+      // Save sample subscribers
+      for (const subData of sampleSubscribers) {
+        const subscriber = new NewsletterSubscriber(subData);
+        await subscriber.save();
+      }
+      
+      console.log(`✅ Created ${sampleSubscribers.length} sample subscribers for ${shopDomain}`);
+    }
+  } catch (error) {
+    console.error('❌ Error initializing sample data:', error);
+  }
+}
+
 // Analytics endpoint for admin dashboard using Shopify Metafields
 
 app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
   try {
     const { shopDomain } = req.params;
     console.log(`📊 Getting newsletter analytics for: ${shopDomain}`);
+    
+    // Initialize sample data if no subscribers exist (for new deployments)
+    await initializeSampleDataIfNeeded(shopDomain);
     
     // Get all subscribers
     const allSubscribers = await NewsletterSubscriber.find({ shopDomain });

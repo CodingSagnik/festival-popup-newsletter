@@ -1450,6 +1450,47 @@ async function initializeSampleDataIfNeeded(shopDomain) {
       
       console.log(`✅ Created ${sampleSubscribers.length} sample subscribers for ${shopDomain}`);
     }
+    
+    // Also check if any festivals exist
+    const popupSettings = await PopupSettings.findOne({ shopDomain });
+    if (!popupSettings || !popupSettings.festivals || popupSettings.festivals.length === 0) {
+      console.log(`🔧 No festivals found for ${shopDomain}, creating sample festival...`);
+      
+      // Create a sample active festival
+      const today = new Date();
+      const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      
+      const sampleFestival = {
+        name: 'Independence Day',
+        startDate: today,
+        endDate: endDate,
+        offer: '25% OFF',
+        discountCode: 'INDA25',
+        backgroundColor: '#cb1d11',
+        textColor: '#ffffff',
+        backgroundImageUrl: 'https://image.pollinations.ai/prompt/beautiful%20festive%20independence%20day%20celebration%20background%20with%20decorative%20elements%2C%20vibrant%20colors%2C%20celebration%2C%20festive%20atmosphere%2C%20high%20quality%2C%20professional%20photography%2C%20detailed?width=815&height=593&seed=648458&model=flux&enhance=true&nologo=true',
+        isInfinite: true,
+        createdAt: new Date(),
+        createdViaQuickSetup: true
+      };
+      
+      await PopupSettings.findOneAndUpdate(
+        { shopDomain },
+        {
+          shopDomain,
+          isActive: true,
+          festivals: [sampleFestival],
+          displaySettings: {
+            showDelay: 3000,
+            displayFrequency: 'once_per_session',
+            position: 'center'
+          }
+        },
+        { upsert: true, new: true }
+      );
+      
+      console.log(`✅ Created sample festival for ${shopDomain}`);
+    }
   } catch (error) {
     console.error('❌ Error initializing sample data:', error);
   }

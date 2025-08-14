@@ -16,19 +16,38 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware - Enhanced CORS for Shopify
 app.use(cors({
-  origin: [
-    'https://test-festival-popup.myshopify.com',
-    'https://*.myshopify.com',
-    'http://localhost:3000',
-    'https://web-production-18602.up.railway.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all Shopify domains
+    if (origin.includes('.myshopify.com') || 
+        origin.includes('shopify.com') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('web-production-18602.up.railway.app')) {
+      return callback(null, true);
+    }
+    
+    // Allow the origin
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Accept', 'Cache-Control', 'Pragma', 'Expires']
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Accept', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With']
 }));
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
+
+// Handle preflight OPTIONS requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, Accept, Cache-Control, Pragma, Expires, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // Main app route - serve Shopify-embedded admin interface
 app.get('/', (req, res) => {
@@ -57,6 +76,44 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
+});
+
+// Simple test popup endpoint for debugging
+app.get('/api/popup/test/:shopDomain', (req, res) => {
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning, Accept',
+    'Content-Type': 'application/json'
+  });
+  
+  const { shopDomain } = req.params;
+  
+  // Return a simple test festival
+  const testFestival = {
+    shopDomain: shopDomain,
+    isActive: true,
+    festivals: [{
+      name: 'Independence Day',
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      offer: '25% OFF',
+      discountCode: 'INDA25',
+      backgroundColor: '#cb1d11',
+      textColor: '#ffffff',
+      backgroundImageUrl: 'https://image.pollinations.ai/prompt/beautiful%20festive%20independence%20day%20celebration%20background?width=800&height=600',
+      isInfinite: true,
+      createdAt: new Date().toISOString()
+    }],
+    displaySettings: {
+      showDelay: 3000,
+      displayFrequency: 'always',
+      position: 'center'
+    }
+  };
+  
+  console.log(`🧪 Test popup endpoint called for: ${shopDomain}`);
+  res.json(testFestival);
 });
 
 // Serve ngrok config for frontend
@@ -1802,12 +1859,15 @@ app.post('/api/shop-settings/:shopDomain/email/disable', async (req, res) => {
 // Get current popup settings
 app.get('/api/popup/:shopDomain', async (req, res) => {
   try {
-    // Add cache-busting headers
+    // Add cache-busting and CORS headers
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': req.headers.origin || '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning, Accept, Cache-Control, Pragma, Expires, X-Requested-With',
+      'Access-Control-Allow-Credentials': 'true',
       'ETag': Date.now().toString(),
       'Last-Modified': new Date().toUTCString()
     });

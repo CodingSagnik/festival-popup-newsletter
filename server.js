@@ -1508,10 +1508,10 @@ async function initializeSampleDataIfNeeded(shopDomain) {
       console.log(`✅ Created ${sampleSubscribers.length} sample subscribers for ${shopDomain}`);
     }
     
-    // Also check if any festivals exist
+    // Always check if any festivals exist (separate from subscriber check)
     const popupSettings = await PopupSettings.findOne({ shopDomain });
-    if (!popupSettings || !popupSettings.festivals || popupSettings.festivals.length === 0) {
-      console.log(`🔧 No festivals found for ${shopDomain}, creating sample festival...`);
+    if (!popupSettings || !popupSettings.festivals || popupSettings.festivals.length === 0 || !popupSettings.isActive) {
+      console.log(`🔧 No active festivals found for ${shopDomain}, creating sample festival...`);
       
       // Create a sample active festival
       const today = new Date();
@@ -1539,7 +1539,7 @@ async function initializeSampleDataIfNeeded(shopDomain) {
           festivals: [sampleFestival],
           displaySettings: {
             showDelay: 3000,
-            displayFrequency: 'once_per_session',
+            displayFrequency: 'always', // Changed to always for testing
             position: 'center'
           }
         },

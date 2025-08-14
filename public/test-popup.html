@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Festival Popup Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #005a8b;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        /* Popup Styles */
+        .festival-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .festival-popup {
+            background: linear-gradient(135deg, #cb1d11, #ff4444);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            position: relative;
+            color: white;
+        }
+        
+        .festival-popup-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            cursor: pointer;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .festival-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .discount-display {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .use-code-text {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        .coupon-code-container {
+            background: white;
+            color: #cb1d11;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .explore-now-btn {
+            background: white;
+            color: #cb1d11;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .explore-now-btn:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎉 Festival Popup Test Page</h1>
+        <p>This page tests the festival popup functionality independently of Shopify.</p>
+        
+        <div id="status" class="status info">
+            Ready to test popup...
+        </div>
+        
+        <button class="test-button" onclick="testAPI()">Test API Connection</button>
+        <button class="test-button" onclick="testPopup()">Show Test Popup</button>
+        <button class="test-button" onclick="fetchAndShowPopup()">Fetch & Show Real Popup</button>
+        
+        <div id="api-response" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: none;">
+            <h3>API Response:</h3>
+            <pre id="response-content"></pre>
+        </div>
+    </div>
+
+    <!-- Popup HTML -->
+    <div id="festival-popup-overlay" class="festival-popup-overlay">
+        <div id="festival-popup" class="festival-popup">
+            <div class="festival-popup-close" onclick="closePopup()">&times;</div>
+            <div class="festival-popup-content">
+                <h1 id="festival-title" class="festival-title">Independence Day Special!</h1>
+                <div id="festival-discount-display" class="discount-display">25% OFF</div>
+                <div class="use-code-text">Use code at checkout</div>
+                <div class="coupon-code-container" onclick="copyCode()">
+                    <span id="festival-discount-code">INDA25</span>
+                </div>
+                <button class="explore-now-btn" onclick="exploreNow()">
+                    Explore Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://web-production-18602.up.railway.app/api';
+        const SHOP_DOMAIN = 'test-festival-popup.myshopify.com';
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        async function testAPI() {
+            updateStatus('Testing API connection...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/popup/${SHOP_DOMAIN}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                document.getElementById('api-response').style.display = 'block';
+                document.getElementById('response-content').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.isActive && data.festivals && data.festivals.length > 0) {
+                    updateStatus('✅ API connection successful! Festival data received.', 'success');
+                } else {
+                    updateStatus('⚠️ API connected but no active festivals found.', 'error');
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ API connection failed: ${error.message}`, 'error');
+                console.error('API test error:', error);
+            }
+        }
+        
+        function testPopup() {
+            updateStatus('Showing test popup...', 'info');
+            showPopup();
+        }
+        
+        async function fetchAndShowPopup() {
+            updateStatus('Fetching real popup data...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/popup/${SHOP_DOMAIN}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.isActive && data.festivals && data.festivals.length > 0) {
+                    const festival = data.festivals[0]; // Get first active festival
+                    
+                    // Update popup content
+                    document.getElementById('festival-title').textContent = festival.name;
+                    document.getElementById('festival-discount-display').textContent = festival.offer;
+                    document.getElementById('festival-discount-code').textContent = festival.discountCode;
+                    
+                    // Update popup styling
+                    const popup = document.getElementById('festival-popup');
+                    if (festival.backgroundColor) {
+                        popup.style.background = festival.backgroundColor;
+                    }
+                    if (festival.textColor) {
+                        popup.style.color = festival.textColor;
+                    }
+                    
+                    showPopup();
+                    updateStatus('✅ Real popup displayed with API data!', 'success');
+                } else {
+                    updateStatus('❌ No active festivals found in API response.', 'error');
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ Failed to fetch popup data: ${error.message}`, 'error');
+                console.error('Fetch popup error:', error);
+            }
+        }
+        
+        function showPopup() {
+            document.getElementById('festival-popup-overlay').style.display = 'flex';
+        }
+        
+        function closePopup() {
+            document.getElementById('festival-popup-overlay').style.display = 'none';
+            updateStatus('Popup closed.', 'info');
+        }
+        
+        function copyCode() {
+            const code = document.getElementById('festival-discount-code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                updateStatus(`✅ Discount code "${code}" copied to clipboard!`, 'success');
+            }).catch(() => {
+                updateStatus('❌ Failed to copy discount code.', 'error');
+            });
+        }
+        
+        function exploreNow() {
+            updateStatus('🛍️ Explore Now clicked! (Would redirect to shop)', 'success');
+            closePopup();
+        }
+        
+        // Auto-test API on page load
+        window.addEventListener('load', () => {
+            setTimeout(testAPI, 1000);
+        });
+    </script>
+</body>
+</html>

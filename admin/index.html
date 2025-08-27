@@ -607,8 +607,8 @@
     <script>
         // Configuration - Auto-detect environment
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:3000/api' 
-            : 'https://web-production-18602.up.railway.app/api';
+            ? 'http://localhost:3000' 
+            : 'https://web-production-18602.up.railway.app';
         const SHOP_DOMAIN = 'test-festival-popup.myshopify.com'; // Fixed to match Shopify store
 
         // Debug information
@@ -681,8 +681,8 @@
             try {
                 // Add cache busting parameter if forced refresh
                 const url = forceRefresh 
-                    ? `${API_BASE_URL}/newsletter/analytics/${SHOP_DOMAIN}?t=${Date.now()}`
-                    : `${API_BASE_URL}/newsletter/analytics/${SHOP_DOMAIN}`;
+                    ? `${API_BASE_URL}/api/newsletter/analytics/${SHOP_DOMAIN}?t=${Date.now()}`
+                    : `${API_BASE_URL}/api/newsletter/analytics/${SHOP_DOMAIN}`;
                 
                 const response = await fetch(url, {
                     cache: forceRefresh ? 'no-cache' : 'default',
@@ -753,7 +753,7 @@
         // Load popup settings
         async function loadPopupSettings() {
             try {
-                const response = await fetch(`${API_BASE_URL}/popup/${SHOP_DOMAIN}`);
+                const response = await fetch(`${API_BASE_URL}/api/popup/${SHOP_DOMAIN}`);
                 const settings = await response.json();
 
                 if (settings) {
@@ -1008,7 +1008,7 @@
             try {
                 console.log('🎨 Generating image for prompt:', prompt);
                 
-                const response = await fetch(`${API_BASE_URL}/generate-image`, {
+                const response = await fetch(`${API_BASE_URL}/api/generate-image`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt })
@@ -1050,7 +1050,7 @@
                 
                 // Try alternative endpoint as fallback
                 try {
-                    const fallbackResponse = await fetch(`${API_BASE_URL}/generate-image-alt`, {
+                    const fallbackResponse = await fetch(`${API_BASE_URL}/api/generate-image-alt`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt })
@@ -1218,7 +1218,7 @@
             try {
                 console.log('🤖 Creating smart festival...');
                 
-                const response = await fetch(`${API_BASE_URL}/create-smart-festival`, {
+                const response = await fetch(`${API_BASE_URL}/api/create-smart-festival`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1437,7 +1437,7 @@
             };
 
             try {
-                const response = await fetch(`${API_BASE_URL}/popup/${SHOP_DOMAIN}`, {
+                const response = await fetch(`${API_BASE_URL}/api/popup/${SHOP_DOMAIN}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settings)
@@ -1516,7 +1516,7 @@
             showTitleGenerationStatus('loading', 'Generating title with AI...');
             
             try {
-                const response = await fetch(`${API_BASE_URL}/generate-dynamic-title`, {
+                const response = await fetch(`${API_BASE_URL}/api/generate-dynamic-title`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1637,7 +1637,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/newsletter/send-blog`, {
+                const response = await fetch(`${API_BASE_URL}/api/newsletter/send-blog`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1728,7 +1728,7 @@
         // Load auto-newsletter status
         async function loadAutoNewsletterStatus() {
             try {
-                const response = await fetch(`${API_BASE_URL}/newsletter/auto-status/${SHOP_DOMAIN}`);
+                const response = await fetch(`${API_BASE_URL}/api/newsletter/auto-status/${SHOP_DOMAIN}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -1847,7 +1847,7 @@
                 button.innerHTML = '⏳ Generating...';
                 button.disabled = true;
                 
-                const response = await fetch(`${API_BASE_URL}/newsletter/send-festival-newsletter`, {
+                const response = await fetch(`${API_BASE_URL}/api/newsletter/send-festival-newsletter`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1906,7 +1906,7 @@
             previewContent.innerHTML = '<p style="color: #666;">Loading regional preview...</p>';
 
             try {
-                const response = await fetch(`${API_BASE_URL}/location/festival/${SHOP_DOMAIN}?state=${encodeURIComponent(selectedState)}`);
+                const response = await fetch(`${API_BASE_URL}/api/location/festival/${SHOP_DOMAIN}?state=${encodeURIComponent(selectedState)}`);
                 const data = await response.json();
 
                 if (data.success) {

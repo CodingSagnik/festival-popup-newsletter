@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Festival Data Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Festival Data Synchronization Test</h1>
+    <p>Testing data consistency between different admin interfaces</p>
+
+    <div class="test-section">
+        <h2>Test 1: Main Admin Endpoint (/api/popup/:shopDomain)</h2>
+        <button onclick="testMainAdminEndpoint()">Test Main Admin Data</button>
+        <div id="main-admin-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Analytics Endpoint (/api/newsletter/analytics/:shopDomain)</h2>
+        <button onclick="testAnalyticsEndpoint()">Test Analytics Data</button>
+        <div id="analytics-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Create Test Festival</h2>
+        <button onclick="createTestFestival()">Create Test Festival</button>
+        <div id="create-festival-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Popup Display Test</h2>
+        <button onclick="testPopupDisplay()">Test Popup Display</button>
+        <div id="popup-display-result"></div>
+    </div>
+
+    <script>
+        const shopDomain = 'test-festival-popup.myshopify.com';
+        const apiBaseUrl = window.location.origin;
+
+        async function testMainAdminEndpoint() {
+            const resultDiv = document.getElementById('main-admin-result');
+            resultDiv.innerHTML = '<div class="info">Testing main admin endpoint...</div>';
+            
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/popup/${shopDomain}`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Main admin endpoint working</div>
+                    <div><strong>Shop Domain:</strong> ${data.shopDomain}</div>
+                    <div><strong>Is Active:</strong> ${data.isActive}</div>
+                    <div><strong>Festivals Count:</strong> ${data.festivals ? data.festivals.length : 0}</div>
+                    <div><strong>Active Festivals:</strong></div>
+                    <pre>${JSON.stringify(data.festivals || [], null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testAnalyticsEndpoint() {
+            const resultDiv = document.getElementById('analytics-result');
+            resultDiv.innerHTML = '<div class="info">Testing analytics endpoint...</div>';
+            
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/newsletter/analytics/${shopDomain}`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Analytics endpoint working</div>
+                    <div><strong>Total Subscribers:</strong> ${data.totalSubscribers}</div>
+                    <div><strong>Festival Subscribers:</strong> ${data.festivalSubscribers}</div>
+                    <div><strong>Blog Subscribers:</strong> ${data.blogSubscribers}</div>
+                    <div><strong>Active Festivals:</strong> ${data.activeFestivals ? data.activeFestivals.length : 0}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function createTestFestival() {
+            const resultDiv = document.getElementById('create-festival-result');
+            resultDiv.innerHTML = '<div class="info">Creating test festival...</div>';
+            
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/app-embeds/generate-festival/${shopDomain}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        offer: '30% OFF Test Festival',
+                        startDate: new Date().toISOString().split('T')[0],
+                        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Test festival created successfully</div>
+                        <div><strong>Festival Name:</strong> ${data.festival.name}</div>
+                        <div><strong>Offer:</strong> ${data.festival.offer}</div>
+                        <div><strong>Discount Code:</strong> ${data.festival.discountCode}</div>
+                        <pre>${JSON.stringify(data.festival, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Failed to create festival: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testPopupDisplay() {
+            const resultDiv = document.getElementById('popup-display-result');
+            resultDiv.innerHTML = '<div class="info">Testing popup display logic...</div>';
+            
+            try {
+                // First get the festival data
+                const response = await fetch(`${apiBaseUrl}/api/popup/${shopDomain}`);
+                const data = await response.json();
+                
+                if (!data.festivals || data.festivals.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">❌ No festivals found - popup will not display</div>';
+                    return;
+                }
+                
+                // Check if any festivals are currently active
+                const now = new Date();
+                const activeFestivals = data.festivals.filter(festival => {
+                    const startDate = new Date(festival.startDate);
+                    const endDate = new Date(festival.endDate);
+                    return now >= startDate && now <= endDate;
+                });
+                
+                if (activeFestivals.length === 0) {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ No active festivals found</div>
+                        <div><strong>Total Festivals:</strong> ${data.festivals.length}</div>
+                        <div><strong>Festivals:</strong></div>
+                        <pre>${JSON.stringify(data.festivals.map(f => ({
+                            name: f.name,
+                            startDate: f.startDate,
+                            endDate: f.endDate,
+                            isActive: now >= new Date(f.startDate) && now <= new Date(f.endDate)
+                        })), null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Active festivals found - popup should display</div>
+                        <div><strong>Active Festivals:</strong> ${activeFestivals.length}</div>
+                        <pre>${JSON.stringify(activeFestivals, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testMainAdminEndpoint();
+                testAnalyticsEndpoint();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

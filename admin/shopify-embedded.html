@@ -1049,13 +1049,15 @@
                 }
                 
                 const separator = fullUrl.includes('?') ? '&' : '?';
-                fullUrl = `${fullUrl}${separator}shopDomain=${shop}`;
+                fullUrl = `${fullUrl}${separator}shopDomain=${shop}&_t=${Date.now()}`;
                 
                 const response = await fetch(fullUrl, {
                     ...options,
                     headers: {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
                         ...options.headers
                     }
                 });
@@ -1230,6 +1232,8 @@
             }
 
             try {
+                console.log(`🗑️ Removing festival: ID="${festivalId}", Name="${festivalName}", Shop="${shop}"`);
+                
                 const result = await makeAuthenticatedRequest('/api/remove-festival', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -1238,13 +1242,19 @@
                     })
                 });
 
+                console.log('🗑️ Remove festival result:', result);
+
                 if (result.success) {
                     alert('Festival removed successfully!');
-                    loadData(); // Refresh the data
+                    // Add a small delay to ensure backend processing is complete
+                    setTimeout(() => {
+                        loadData(); // Refresh the data
+                    }, 500);
                 } else {
                     alert('Error removing festival: ' + result.message);
                 }
             } catch (error) {
+                console.error('Error removing festival:', error);
                 alert('Error removing festival: ' + error.message);
             }
         }

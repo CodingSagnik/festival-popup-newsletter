@@ -1859,17 +1859,18 @@ app.post('/api/shop-settings/:shopDomain/email/disable', async (req, res) => {
 // Get current popup settings
 app.get('/api/popup/:shopDomain', async (req, res) => {
   try {
-    // Add cache-busting and CORS headers
+    // Add cache-busting and CORS headers with stronger cache prevention
     res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
       'Pragma': 'no-cache',
       'Expires': '0',
       'Access-Control-Allow-Origin': req.headers.origin || '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning, Accept, Cache-Control, Pragma, Expires, X-Requested-With',
       'Access-Control-Allow-Credentials': 'true',
-      'ETag': Date.now().toString(),
-      'Last-Modified': new Date().toUTCString()
+      'ETag': `"${Date.now()}-${Math.random()}"`,
+      'Last-Modified': new Date().toUTCString(),
+      'Vary': 'Accept-Encoding'
     });
     
     const { shopDomain } = req.params;
@@ -4860,28 +4861,43 @@ app.post('/api/remove-festival', async (req, res) => {
 
     // Remove the festival from the array - Compatible with both MongoDB and file-based storage
     const originalCount = settings.festivals.length;
+    console.log(`🗑️ Festival removal request: festivalId="${festivalId}", originalCount=${originalCount}`);
+    console.log(`🗑️ Festivals before removal:`, settings.festivals.map((f, i) => ({ index: i, name: f.name, id: f._id })));
+    
     settings.festivals = settings.festivals.filter((festival, index) => {
+      console.log(`🔍 Checking festival at index ${index}: name="${festival.name}", _id="${festival._id}"`);
+      
       // Method 1: Try MongoDB _id if it exists
       if (festival._id && typeof festival._id.toString === 'function') {
-        return festival._id.toString() !== festivalId;
+        const match = festival._id.toString() === festivalId;
+        console.log(`🔍 MongoDB _id check: ${festival._id.toString()} === ${festivalId} = ${match}`);
+        if (match) return false;
       }
+      
       // Method 2: Try array index (most common for file-based storage)
-      if (index.toString() === festivalId) {
+      const indexMatch = index.toString() === festivalId;
+      console.log(`🔍 Index check: ${index} === ${festivalId} = ${indexMatch}`);
+      if (indexMatch) {
+        console.log(`✅ Removing festival at index ${index}: ${festival.name}`);
         return false;
       }
+      
       // Method 3: Try festival name as identifier
-      if (festival.name === festivalId) {
-        return false;
-      }
+      const nameMatch = festival.name === festivalId;
+      console.log(`🔍 Name check: "${festival.name}" === "${festivalId}" = ${nameMatch}`);
+      if (nameMatch) return false;
+      
       // Method 4: Try discount code as identifier
-      if (festival.discountCode === festivalId) {
-        return false;
-      }
+      const codeMatch = festival.discountCode === festivalId;
+      console.log(`🔍 Code check: "${festival.discountCode}" === "${festivalId}" = ${codeMatch}`);
+      if (codeMatch) return false;
+      
       return true;
     });
 
     const removedCount = originalCount - settings.festivals.length;
-    console.log(`🗑️ Festival removal: ${removedCount} festival(s) removed (${originalCount} → ${settings.festivals.length})`);
+    console.log(`🗑️ Festival removal result: ${removedCount} festival(s) removed (${originalCount} → ${settings.festivals.length})`);
+    console.log(`🗑️ Festivals after removal:`, settings.festivals.map((f, i) => ({ index: i, name: f.name, id: f._id })));
 
     await settings.save();
 

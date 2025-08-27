@@ -4118,66 +4118,7 @@ app.get('/api/newsletter/test-subscriber', (req, res) => {
   `);
 });
 
-// Get newsletter analytics
-app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
-  try {
-    const { shopDomain } = req.params;
-    
-    // Get total subscribers (both types)
-    const totalSubscribers = await NewsletterSubscriber.countDocuments({ shopDomain, isActive: true });
-    
-    // Get festival subscribers
-    const festivalSubscribers = await NewsletterSubscriber.countDocuments({ 
-      shopDomain, 
-      isActive: true, 
-      subscriptionType: 'festival' 
-    });
-    
-    // Get blog subscribers
-    const blogSubscribers = await NewsletterSubscriber.countDocuments({ 
-      shopDomain, 
-      isActive: true, 
-      subscriptionType: 'blog' 
-    });
-    
-    const blogPostsSent = await BlogPost.countDocuments({ shopDomain, sentNewsletter: true });
-    const recentSubscribers = await NewsletterSubscriber.countDocuments({
-      shopDomain,
-      isActive: true,
-      subscribedAt: { $gte: moment().subtract(30, 'days').toDate() }
-    });
-    
-    // Check for custom festivals first, then fall back to built-in festivals
-    let activeFestivals = [];
-    const popupSettings = await PopupSettings.findOne({ shopDomain });
-    
-    if (popupSettings && popupSettings.festivals && popupSettings.festivals.length > 0) {
-      // Check custom festivals for currently active ones (use local date)
-      const now = new Date();
-      // Get current date in India timezone as YYYY-MM-DD string
-      const indiaDate = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
-      const currentDateStr = indiaDate.getFullYear() + '-' + 
-                            String(indiaDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                            String(indiaDate.getDate()).padStart(2, '0');
-      
-      activeFestivals = popupSettings.festivals.filter(festival => {
-        // Convert to ISO string and extract date part from ISO strings (YYYY-MM-DD)
-        const startDateStr = festival.startDate.toISOString().split('T')[0];
-        const endDateStr = festival.endDate.toISOString().split('T')[0];
-        
-        const isActive = currentDateStr >= startDateStr && currentDateStr <= endDateStr;
-        return isActive;
-      });
-    }
-    
-    // If no custom festivals are active, fall back to built-in festivals only if no custom festivals exist
-    let currentFestival = activeFestivals.length > 0 ? activeFestivals[0] : null;
-    if (!currentFestival && (!popupSettings || !popupSettings.festivals || popupSettings.festivals.length === 0)) {
-      currentFestival = getCurrentFestival();
-    }
-    
-    res.json({
-      totalSubscribers,
+// Duplicate analytics endpoint removed - using the main one at line 1558
       festivalSubscribers,
       blogSubscribers,
       blogPostsSent,
@@ -4854,7 +4795,7 @@ app.get('/api/subscribers', async (req, res) => {
 
 app.get('/api/stats', async (req, res) => {
   try {
-    const shopDomain = req.query.shopDomain || 'test-shop.myshopify.com';
+    const shopDomain = req.query.shopDomain || 'test-festival-popup.myshopify.com';
     
     // Get total subscribers (both types)
     const totalSubscribers = await NewsletterSubscriber.countDocuments({ 

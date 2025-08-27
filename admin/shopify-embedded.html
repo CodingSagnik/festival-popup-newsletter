@@ -1073,19 +1073,22 @@
 
         async function loadData() {
             try {
-                // Load stats
-                const statsData = await makeAuthenticatedRequest('/api/stats');
-                if (statsData.success) {
-                    document.getElementById('total-subscribers').textContent = statsData.stats.totalSubscribers;
-                    document.getElementById('festival-subscribers').textContent = statsData.stats.festivalSubscribers;
-                    document.getElementById('blog-subscribers').textContent = statsData.stats.blogSubscribers;
-                    document.getElementById('newsletters-sent').textContent = statsData.stats.newslettersSent;
+                // Load stats using the same endpoint as main admin dashboard
+                const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}`);
+                if (analyticsData) {
+                    document.getElementById('total-subscribers').textContent = analyticsData.totalSubscribers || 0;
+                    document.getElementById('festival-subscribers').textContent = analyticsData.festivalSubscribers || 0;
+                    document.getElementById('blog-subscribers').textContent = analyticsData.blogSubscribers || 0;
+                    document.getElementById('newsletters-sent').textContent = analyticsData.blogPostsSent || 0;
                 }
 
-                // Load festivals
-                const festivalsData = await makeAuthenticatedRequest('/api/popup-settings');
-                if (festivalsData.success && festivalsData.settings.festivals) {
-                    displayFestivals(festivalsData.settings.festivals);
+                // Load festivals using the same endpoint as main admin dashboard
+                const festivalsData = await makeAuthenticatedRequest(`/api/popup/${shop}`);
+                if (festivalsData && festivalsData.festivals) {
+                    displayFestivals(festivalsData.festivals);
+                } else if (festivalsData) {
+                    // Handle case where festivals might be empty array
+                    displayFestivals([]);
                 }
 
                 // Load email configuration
@@ -1819,10 +1822,10 @@
             const festivalSelect = document.getElementById('regional-festival-select');
             
             try {
-                // Get current festivals
-                const festivalsData = await makeAuthenticatedRequest('/api/popup-settings');
+                // Get current festivals using the same endpoint as main admin
+                const festivalsData = await makeAuthenticatedRequest(`/api/popup/${shop}`);
                 
-                if (!festivalsData.success || !festivalsData.settings.festivals || festivalsData.settings.festivals.length === 0) {
+                if (!festivalsData || !festivalsData.festivals || festivalsData.festivals.length === 0) {
                     festivalSelect.innerHTML = '<option value="">No festivals available</option>';
                     return;
                 }
@@ -1832,7 +1835,7 @@
                 const activeFestivals = [];
                 const upcomingFestivals = [];
                 
-                festivalsData.settings.festivals.forEach(festival => {
+                festivalsData.festivals.forEach(festival => {
                     const startDate = new Date(festival.startDate);
                     const endDate = new Date(festival.endDate);
                     
@@ -1851,7 +1854,7 @@
                     activeFestivals.forEach((festival, localIndex) => {
                         const endDate = new Date(festival.endDate).toLocaleDateString();
                         // Use the actual index in the full festivals array
-                        const globalIndex = festivalsData.settings.festivals.indexOf(festival);
+                        const globalIndex = festivalsData.festivals.indexOf(festival);
                         options += `<option value="${globalIndex}">🟢 ${festival.name} (ends ${endDate})</option>`;
                     });
                     options += '</optgroup>';
@@ -1862,7 +1865,7 @@
                     upcomingFestivals.forEach((festival, localIndex) => {
                         const startDate = new Date(festival.startDate).toLocaleDateString();
                         // Use the actual index in the full festivals array
-                        const globalIndex = festivalsData.settings.festivals.indexOf(festival);
+                        const globalIndex = festivalsData.festivals.indexOf(festival);
                         options += `<option value="${globalIndex}">🔵 ${festival.name} (starts ${startDate})</option>`;
                     });
                     options += '</optgroup>';
@@ -1896,10 +1899,10 @@
                 previewContent.innerHTML = '<p>Loading regional preview...</p>';
                 previewContent.className = 'regional-preview-area';
                 
-                // Get current festivals
-                const festivalsData = await makeAuthenticatedRequest('/api/popup-settings');
+                // Get current festivals using the same endpoint as main admin
+                const festivalsData = await makeAuthenticatedRequest(`/api/popup/${shop}`);
                 
-                if (!festivalsData.success || !festivalsData.settings.festivals || festivalsData.settings.festivals.length === 0) {
+                if (!festivalsData || !festivalsData.festivals || festivalsData.festivals.length === 0) {
                     previewContent.innerHTML = `
                         <div style="text-align: center; color: #6d7175;">
                             <p><strong>No Festivals Found</strong></p>
@@ -1914,11 +1917,11 @@
                 
                 // Simple approach: use array index directly since that's what the dropdown uses
                 const festivalIndex = parseInt(selectedFestivalId);
-                if (!isNaN(festivalIndex) && festivalIndex >= 0 && festivalIndex < festivalsData.settings.festivals.length) {
-                    festivalToPreview = festivalsData.settings.festivals[festivalIndex];
+                if (!isNaN(festivalIndex) && festivalIndex >= 0 && festivalIndex < festivalsData.festivals.length) {
+                    festivalToPreview = festivalsData.festivals[festivalIndex];
                 } else {
                     // Fallback: try to find by _id (MongoDB) or name
-                    festivalToPreview = festivalsData.settings.festivals.find(festival => 
+                    festivalToPreview = festivalsData.festivals.find(festival => 
                         (festival._id && festival._id === selectedFestivalId) ||
                         festival.name === selectedFestivalId
                     );

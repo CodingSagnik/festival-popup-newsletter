@@ -1017,7 +1017,7 @@
         // API Configuration - Load from centralized config if available
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:3000' 
-            : (window.NGROK_CONFIG?.API_URL || 'https://web-production-18602.up.railway.app');
+            : (window.NGROK_CONFIG?.NGROK_URL || 'https://web-production-18602.up.railway.app');
 
         let app;
         try {
@@ -1100,16 +1100,23 @@
             
             try {
                 // Test basic API connectivity first
+                const healthUrl = `${API_BASE_URL}/health`;
                 console.log('🧪 Testing basic API connectivity...');
-                const healthResponse = await fetch(`${API_BASE_URL}/health`, {
+                console.log('🧪 Health check URL:', healthUrl);
+                const healthResponse = await fetch(healthUrl, {
                     headers: {
                         'ngrok-skip-browser-warning': 'true',
                         'Accept': 'application/json'
                     }
                 });
                 
+                console.log('🧪 Health response status:', healthResponse.status);
+                console.log('🧪 Health response ok:', healthResponse.ok);
+                
                 if (!healthResponse.ok) {
-                    throw new Error(`API health check failed: ${healthResponse.status}`);
+                    const errorText = await healthResponse.text();
+                    console.error('❌ Health check failed:', errorText);
+                    throw new Error(`API health check failed: ${healthResponse.status} - URL: ${healthUrl} - Response: ${errorText}`);
                 }
                 
                 console.log('✅ API health check passed');

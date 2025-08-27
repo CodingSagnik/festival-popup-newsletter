@@ -1032,6 +1032,10 @@
 
         async function makeAuthenticatedRequest(url, options = {}) {
             try {
+                console.log('🔄 Making authenticated request:', url);
+                console.log('🔄 Shop domain:', shop);
+                console.log('🔄 API Base URL:', API_BASE_URL);
+                
                 // Build the full URL with API_BASE_URL
                 let fullUrl;
                 if (url.startsWith('http')) {
@@ -1050,6 +1054,8 @@
                 const separator = fullUrl.includes('?') ? '&' : '?';
                 fullUrl = `${fullUrl}${separator}shopDomain=${shop}&_t=${Date.now()}`;
                 
+                console.log('🔄 Full URL:', fullUrl);
+                
                 const response = await fetch(fullUrl, {
                     ...options,
                     headers: {
@@ -1057,49 +1063,130 @@
                         'ngrok-skip-browser-warning': 'true',
                         'Cache-Control': 'no-cache, no-store, must-revalidate',
                         'Pragma': 'no-cache',
+                        'Accept': 'application/json',
                         ...options.headers
                     }
                 });
                 
+                console.log('🔄 Response status:', response.status);
+                console.log('🔄 Response ok:', response.ok);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('❌ Response error:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
                 }
                 
-                return await response.json();
+                const data = await response.json();
+                console.log('✅ Response data:', data);
+                return data;
             } catch (error) {
-                console.error('Request failed:', error);
+                console.error('❌ Request failed:', error);
+                console.error('❌ Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    url: url,
+                    shop: shop,
+                    API_BASE_URL: API_BASE_URL
+                });
                 throw error;
             }
         }
 
         async function loadData() {
+            console.log('🚀 Starting loadData function...');
+            console.log('🚀 Shop:', shop);
+            console.log('🚀 API_BASE_URL:', API_BASE_URL);
+            
             try {
+                // Test basic API connectivity first
+                console.log('🧪 Testing basic API connectivity...');
+                const healthResponse = await fetch(`${API_BASE_URL}/health`, {
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!healthResponse.ok) {
+                    throw new Error(`API health check failed: ${healthResponse.status}`);
+                }
+                
+                console.log('✅ API health check passed');
+                
                 // Load stats using the same endpoint as main admin dashboard
-                const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}`);
-                if (analyticsData) {
-                    document.getElementById('total-subscribers').textContent = analyticsData.totalSubscribers || 0;
-                    document.getElementById('festival-subscribers').textContent = analyticsData.festivalSubscribers || 0;
-                    document.getElementById('blog-subscribers').textContent = analyticsData.blogSubscribers || 0;
-                    document.getElementById('newsletters-sent').textContent = analyticsData.blogPostsSent || 0;
+                console.log('📊 Loading analytics data...');
+                try {
+                    const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}`);
+                    if (analyticsData) {
+                        document.getElementById('total-subscribers').textContent = analyticsData.totalSubscribers || 0;
+                        document.getElementById('festival-subscribers').textContent = analyticsData.festivalSubscribers || 0;
+                        document.getElementById('blog-subscribers').textContent = analyticsData.blogSubscribers || 0;
+                        document.getElementById('newsletters-sent').textContent = analyticsData.blogPostsSent || 0;
+                        console.log('✅ Analytics data loaded');
+                    }
+                } catch (analyticsError) {
+                    console.warn('⚠️ Analytics data failed to load:', analyticsError);
+                    // Set default values
+                    document.getElementById('total-subscribers').textContent = '0';
+                    document.getElementById('festival-subscribers').textContent = '0';
+                    document.getElementById('blog-subscribers').textContent = '0';
+                    document.getElementById('newsletters-sent').textContent = '0';
                 }
 
                 // Load festivals using the same endpoint as main admin dashboard
-                const festivalsData = await makeAuthenticatedRequest(`/api/popup/${shop}`);
-                if (festivalsData && festivalsData.festivals) {
-                    displayFestivals(festivalsData.festivals);
-                } else if (festivalsData) {
-                    // Handle case where festivals might be empty array
+                console.log('🎪 Loading festivals data...');
+                try {
+                    const festivalsData = await makeAuthenticatedRequest(`/api/popup/${shop}`);
+                    if (festivalsData && festivalsData.festivals) {
+                        displayFestivals(festivalsData.festivals);
+                        console.log('✅ Festivals data loaded');
+                    } else if (festivalsData) {
+                        // Handle case where festivals might be empty array
+                        displayFestivals([]);
+                        console.log('✅ Empty festivals data loaded');
+                    }
+                } catch (festivalsError) {
+                    console.warn('⚠️ Festivals data failed to load:', festivalsError);
                     displayFestivals([]);
                 }
 
                 // Load email configuration
-                await loadEmailConfiguration();
+                console.log('📧 Loading email configuration...');
+                try {
+                    await loadEmailConfiguration();
+                    console.log('✅ Email configuration loaded');
+                } catch (emailError) {
+                    console.warn('⚠️ Email configuration failed to load:', emailError);
+                }
+
+                // Load blog popup settings
+                console.log('📖 Loading blog popup settings...');
+                try {
+                    await loadBlogPopupSettingsShopify();
+                    console.log('✅ Blog popup settings loaded');
+                } catch (blogError) {
+                    console.warn('⚠️ Blog popup settings failed to load:', blogError);
+                }
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
+                console.log('✅ All data loading completed');
+                
             } catch (error) {
-                console.error('Error loading data:', error);
-                document.getElementById('loading').innerHTML = '<p>Error loading data. Please check your connection.</p>';
+                console.error('❌ Critical error loading data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <h3>⚠️ Connection Error</h3>
+                        <p>Unable to connect to the API server.</p>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>API URL:</strong> ${API_BASE_URL}</p>
+                        <p><strong>Shop:</strong> ${shop}</p>
+                        <button onclick="location.reload()" style="background: #008060; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+                            🔄 Retry
+                        </button>
+                    </div>
+                `;
             }
         }
 

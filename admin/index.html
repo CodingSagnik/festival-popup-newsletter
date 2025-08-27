@@ -621,12 +621,12 @@
         // Test API connectivity
         async function testAPIConnectivity() {
             try {
-                const response = await fetch('http://localhost:3000/health');
+                const response = await fetch(`${API_BASE_URL}/health`);
                 const data = await response.json();
                 console.log('✅ API Health Check:', data);
             } catch (error) {
                 console.error('❌ API Health Check Failed:', error);
-                console.log('🚨 Make sure the server is running with: node server.js');
+                console.log('🚨 Make sure the server is running and accessible at:', API_BASE_URL);
             }
         }
 

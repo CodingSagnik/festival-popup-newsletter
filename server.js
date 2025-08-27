@@ -1508,12 +1508,12 @@ async function initializeSampleDataIfNeeded(shopDomain) {
       console.log(`✅ Created ${sampleSubscribers.length} sample subscribers for ${shopDomain}`);
     }
     
-    // Always check if any festivals exist (separate from subscriber check)
+    // Only create sample festival if NO popup settings exist at all (first time setup)
     const popupSettings = await PopupSettings.findOne({ shopDomain });
-    if (!popupSettings || !popupSettings.festivals || popupSettings.festivals.length === 0 || !popupSettings.isActive) {
-      console.log(`🔧 No active festivals found for ${shopDomain}, creating sample festival...`);
+    if (!popupSettings) {
+      console.log(`🔧 No popup settings found for ${shopDomain}, creating initial sample festival...`);
       
-      // Create a sample active festival
+      // Create a sample active festival ONLY for first-time setup
       const today = new Date();
       const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
       
@@ -1546,7 +1546,9 @@ async function initializeSampleDataIfNeeded(shopDomain) {
         { upsert: true, new: true }
       );
       
-      console.log(`✅ Created sample festival for ${shopDomain}`);
+      console.log(`✅ Created initial sample festival for ${shopDomain}`);
+    } else {
+      console.log(`ℹ️ Popup settings already exist for ${shopDomain}, skipping sample festival creation`);
     }
   } catch (error) {
     console.error('❌ Error initializing sample data:', error);

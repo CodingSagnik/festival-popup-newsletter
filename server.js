@@ -4119,19 +4119,6 @@ app.get('/api/newsletter/test-subscriber', (req, res) => {
 });
 
 // Duplicate analytics endpoint removed - using the main one at line 1558
-      festivalSubscribers,
-      blogSubscribers,
-      blogPostsSent,
-      recentSubscribers,
-      currentFestival,
-      activeFestivals,
-      serverTime: new Date().toISOString(),
-      localTime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // App Embeds Sync Endpoints - NEW
 app.post('/api/app-embeds/sync/:shopDomain', async (req, res) => {

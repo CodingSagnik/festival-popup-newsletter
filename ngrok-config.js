@@ -7,7 +7,7 @@
 
 const NGROK_CONFIG = {
   // 🚨 UPDATE THIS WHEN YOUR DEPLOYMENT URL CHANGES
-  NGROK_URL: 'https://web-production-18602.up.railway.app',
+  NGROK_URL: 'https://your-app-name.onrender.com', // Update after Render deployment
   
   // Derived URLs (automatically calculated)
   get API_URL() {

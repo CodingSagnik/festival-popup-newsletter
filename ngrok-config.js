@@ -7,7 +7,7 @@
 
 const NGROK_CONFIG = {
   // 🚨 UPDATE THIS WHEN YOUR DEPLOYMENT URL CHANGES
-  NGROK_URL: 'https://your-app-name.onrender.com', // Update after Render deployment
+  NGROK_URL: 'https://festival-popup-newsletter.onrender.com', // Render deployment URL
   
   // Derived URLs (automatically calculated)
   get API_URL() {

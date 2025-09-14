@@ -66,7 +66,7 @@ The **Festival Popup & Newsletter Extension** is a comprehensive Shopify applica
 - **Storage**: File-based JSON (no database required)
 - **Email**: Nodemailer with SMTP
 - **Image Processing**: Sharp, ColorThief
-- **Deployment**: Railway.app
+- **Deployment**: Render.com
 
 **Frontend:**
 - **Shopify Extension**: Liquid templates + JavaScript
@@ -459,7 +459,7 @@ ENCRYPTION_KEY=your_32_character_encryption_key
 client_id = "your_client_id"
 name = "Festival Newsletter Popup"
 handle = "festival-newsletter-popup"
-application_url = "https://your-app.railway.app"
+application_url = "https://your-app.onrender.com"
 embedded = true
 
 [access_scopes]
@@ -558,10 +558,10 @@ localStorage.setItem('festival-debug', 'true');
 **API Testing:**
 ```bash
 # Test festival API
-curl -X GET "https://your-app.railway.app/api/popup/test-shop.myshopify.com"
+curl -X GET "https://your-app.onrender.com/api/popup/test-shop.myshopify.com"
 
 # Test location API  
-curl -X GET "https://your-app.railway.app/api/location/detect"
+curl -X GET "https://your-app.onrender.com/api/location/detect"
 ```
 
 ---

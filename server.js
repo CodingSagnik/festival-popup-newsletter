@@ -25,7 +25,7 @@ app.use(cors({
         origin.includes('shopify.com') ||
         origin.includes('localhost') ||
         origin.includes('127.0.0.1') ||
-        origin.includes('web-production-18602.up.railway.app')) {
+        origin.includes('festival-popup-newsletter.onrender.com')) {
       return callback(null, true);
     }
     
@@ -341,7 +341,7 @@ Festival name:`;
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
         'X-Title': 'Festival Popup Generator'
       },
       timeout: 15000
@@ -2379,7 +2379,7 @@ Only respond with the refined festival name, nothing else.`;
           headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'http://localhost:3000',
+            'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
             'X-Title': 'Festival Popup Generator'
           },
           timeout: 15000
@@ -3309,7 +3309,7 @@ Generate the blog newsletter content now:`;
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
         'X-Title': 'Blog Newsletter Auto-Generator'
       }
     });
@@ -3589,7 +3589,7 @@ Generate the newsletter content now:`;
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
         'X-Title': 'Festival Newsletter Auto-Generator'
       }
     });
@@ -3752,7 +3752,7 @@ TITLE:`;
         headers: {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'http://localhost:3000',
+          'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
           'X-Title': 'Festival Newsletter Title Generator'
         },
         timeout: 15000
@@ -4244,7 +4244,7 @@ app.post('/api/app-embeds/sync/:shopDomain', async (req, res) => {
               console.log('📅 Using provided end date:', finalEndDate);
             }
             
-            const aiResponse = await axios.post('http://localhost:3000/api/create-smart-festival', {
+            const aiResponse = await axios.post(`http://localhost:${PORT}/api/create-smart-festival`, {
               shopDomain,
               offer: embedsSettings.festival_offer,  // Use EXACT offer text
               startDate: embedsSettings.festival_current_start_date || embedsSettings.festival_start_date,
@@ -4639,7 +4639,7 @@ app.post('/api/app-embeds/generate-festival/:shopDomain', async (req, res) => {
     }
     
     // Use existing smart festival generation
-    const aiResponse = await axios.post('http://localhost:3000/api/create-smart-festival', {
+    const aiResponse = await axios.post(`http://localhost:${PORT}/api/create-smart-festival`, {
       shopDomain,
       offer,
       startDate,

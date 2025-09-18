@@ -2625,7 +2625,7 @@ app.post('/api/create-smart-festival', async (req, res) => {
     
     // 5. Use image colors if available, otherwise fall back to site colors
     let finalBackgroundColor = colors.primary;
-    let finalTextColor = textColor || '#000000';
+    let finalTextColor = textColor || '#FFFFFF';
     
     if (imageColors) {
       finalBackgroundColor = imageColors.background || imageColors.primary;
@@ -2966,7 +2966,7 @@ app.post('/api/newsletter/send-blog', async (req, res) => {
           <div style="background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 20px 0;">
             <h3 style="color: #333; margin: 0 0 15px 0;">📖 Latest from Our Blog:</h3>
             <h4 style="color: #667eea; margin: 0 0 15px 0;">${blogTitle}</h4>
-            <div style="color: #000000; line-height: 1.6; margin: 15px 0;">${blogContent.replace(/\n/g, '<br>')}</div>
+            <div style="color: #FFFFFF; line-height: 1.6; margin: 15px 0;">${blogContent.replace(/\n/g, '<br>')}</div>
           </div>
           
           <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">

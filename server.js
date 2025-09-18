@@ -22,8 +22,14 @@ async function sendEmailViaHTTP(emailOptions) {
       try {
         console.log('🔑 Using Resend API key for real email delivery');
         
+        // Resend requires verified domain for "from" address
+        // For testing, we'll use a default verified address
+        const fromEmail = emailOptions.from.includes('@') ? 
+          emailOptions.from : 
+          'noreply@resend.dev'; // Resend's default testing domain
+        
         const resendPayload = {
-          from: emailOptions.from,
+          from: fromEmail,
           to: [emailOptions.to],
           subject: emailOptions.subject,
           html: emailOptions.html,
@@ -39,10 +45,12 @@ async function sendEmailViaHTTP(emailOptions) {
         });
         
         console.log('✅ Real email sent via Resend API');
+        console.log('📧 Resend response:', response.data);
         return { 
           messageId: response.data.id,
           service: 'resend',
-          real: true
+          real: true,
+          provider: 'Resend API'
         };
         
       } catch (resendError) {

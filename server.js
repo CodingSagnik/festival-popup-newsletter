@@ -5439,6 +5439,36 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
   }
 });
 
+// Debug endpoint to check email settings
+app.get('/api/shop-settings/:shopDomain/debug', async (req, res) => {
+  try {
+    const { shopDomain } = req.params;
+    console.log(`🔍 DEBUG: Checking settings for shop: ${shopDomain}`);
+    
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    
+    res.json({
+      success: true,
+      shopDomain,
+      hasSettings: !!shopSettings,
+      emailSettings: shopSettings ? {
+        enabled: shopSettings.emailSettings.enabled,
+        provider: shopSettings.emailSettings.provider,
+        fromEmail: shopSettings.emailSettings.fromEmail,
+        fromName: shopSettings.emailSettings.fromName,
+        hasEncryptedPassword: !!shopSettings.emailSettings.encryptedPassword,
+        smtpHost: shopSettings.emailSettings.smtpHost,
+        smtpPort: shopSettings.emailSettings.smtpPort,
+        secure: shopSettings.emailSettings.secure
+      } : null,
+      rawSettings: shopSettings
+    });
+  } catch (error) {
+    console.error('❌ Debug endpoint error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Test shop email configuration
 app.post('/api/shop-settings/:shopDomain/email/test', async (req, res) => {
   try {

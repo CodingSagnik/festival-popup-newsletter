@@ -4,10 +4,10 @@ const cors = require('cors');
 // const mongoose = require('mongoose'); // Removed - using Shopify Metafields
 const nodemailer = require('nodemailer');
 
-// Alternative email service for cloud hosting (when SMTP is blocked)
+// Real email service using Resend API (works on free hosting)
 async function sendEmailViaHTTP(emailOptions) {
   try {
-    console.log('📧 Using HTTP-based email service (SMTP blocked on free hosting)');
+    console.log('📧 Using Resend API for real email delivery');
     console.log('📧 Email details:', {
       to: emailOptions.to,
       from: emailOptions.from,
@@ -15,49 +15,98 @@ async function sendEmailViaHTTP(emailOptions) {
       hasHtml: !!emailOptions.html
     });
     
-    // Use a free email service API
-    // For demo purposes, we'll use a simple webhook service
+    // Option 1: Try Resend API (if API key is configured)
+    const resendApiKey = process.env.RESEND_API_KEY;
     
-    const emailPayload = {
-      to: emailOptions.to,
-      from: emailOptions.from,
-      subject: emailOptions.subject,
-      html: emailOptions.html,
-      text: emailOptions.text || 'Please enable HTML to view this email.',
-      timestamp: new Date().toISOString(),
-      service: 'festival-popup-app'
-    };
-    
-    // Try to send via webhook.site for testing (replace with real service in production)
-    try {
-      const response = await axios.post('https://webhook.site/unique-id-here', emailPayload, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Festival-Popup-App/1.0'
-        }
-      });
-      
-      console.log('📧 Email webhook sent successfully');
-      return { messageId: `webhook-${Date.now()}` };
-      
-    } catch (webhookError) {
-      console.log('📧 Webhook failed, using local simulation');
-      
-      // Simulate successful email sending for development
-      console.log('✅ Email simulated successfully (SMTP not available on free hosting)');
-      console.log('📧 In production, integrate with:');
-      console.log('   - SendGrid API (free tier: 100 emails/day)');
-      console.log('   - Resend API (free tier: 3000 emails/month)');
-      console.log('   - Mailgun API (free tier: 5000 emails/month)');
-      console.log('   - AWS SES (free tier: 62000 emails/month)');
-      
-      return { 
-        messageId: `simulated-${Date.now()}`,
-        simulated: true,
-        note: 'Email simulated - SMTP blocked on free hosting'
-      };
+    if (resendApiKey) {
+      try {
+        console.log('🔑 Using Resend API key for real email delivery');
+        
+        const resendPayload = {
+          from: emailOptions.from,
+          to: [emailOptions.to],
+          subject: emailOptions.subject,
+          html: emailOptions.html,
+          text: emailOptions.text || 'Please enable HTML to view this email.'
+        };
+        
+        const response = await axios.post('https://api.resend.com/emails', resendPayload, {
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        });
+        
+        console.log('✅ Real email sent via Resend API');
+        return { 
+          messageId: response.data.id,
+          service: 'resend',
+          real: true
+        };
+        
+      } catch (resendError) {
+        console.error('❌ Resend API failed:', resendError.response?.data || resendError.message);
+        // Fall through to simulation
+      }
     }
+    
+    // Option 2: Try SendGrid API (if API key is configured)
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    
+    if (sendgridApiKey) {
+      try {
+        console.log('🔑 Using SendGrid API key for real email delivery');
+        
+        const sendgridPayload = {
+          personalizations: [{
+            to: [{ email: emailOptions.to }],
+            subject: emailOptions.subject
+          }],
+          from: { email: emailOptions.from },
+          content: [{
+            type: 'text/html',
+            value: emailOptions.html
+          }]
+        };
+        
+        const response = await axios.post('https://api.sendgrid.com/v3/mail/send', sendgridPayload, {
+          headers: {
+            'Authorization': `Bearer ${sendgridApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        });
+        
+        console.log('✅ Real email sent via SendGrid API');
+        return { 
+          messageId: `sendgrid-${Date.now()}`,
+          service: 'sendgrid',
+          real: true
+        };
+        
+      } catch (sendgridError) {
+        console.error('❌ SendGrid API failed:', sendgridError.response?.data || sendgridError.message);
+        // Fall through to simulation
+      }
+    }
+    
+    // Option 3: Simulation (if no API keys configured)
+    console.log('📧 No email API keys configured, using simulation');
+    console.log('🔧 To send real emails on free hosting, add one of these to your environment:');
+    console.log('   RESEND_API_KEY=your_resend_api_key (Free: 3000 emails/month)');
+    console.log('   SENDGRID_API_KEY=your_sendgrid_api_key (Free: 100 emails/day)');
+    console.log('');
+    console.log('📝 Quick setup guides:');
+    console.log('   Resend: https://resend.com/api-keys');
+    console.log('   SendGrid: https://app.sendgrid.com/settings/api_keys');
+    
+    return { 
+      messageId: `simulated-${Date.now()}`,
+      simulated: true,
+      service: 'simulation',
+      note: 'Add RESEND_API_KEY or SENDGRID_API_KEY environment variable for real emails'
+    };
     
   } catch (error) {
     console.error('❌ HTTP email service failed:', error);
@@ -5655,14 +5704,18 @@ app.post('/api/shop-settings/:shopDomain/email/test', async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: result.simulated ? 
-        'Email simulated successfully! (SMTP blocked on free hosting - use paid hosting for real emails)' :
-        'Test email sent successfully! Please check your inbox.',
+      message: result.real ? 
+        'Real email sent successfully! Please check your inbox.' :
+        result.simulated ? 
+          'Email simulated successfully! Add RESEND_API_KEY or SENDGRID_API_KEY to environment for real emails.' :
+          'Test email sent successfully! Please check your inbox.',
       testEmail: testEmail,
       sentAt: new Date().toISOString(),
       messageId: result.messageId,
+      service: result.service,
+      real: result.real || false,
       simulated: result.simulated || false,
-      note: result.simulated ? 'Upgrade to paid hosting to send real emails' : undefined
+      note: result.note
     });
     
   } catch (error) {

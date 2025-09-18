@@ -384,7 +384,13 @@
                             For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>
                         </div>
                         <div class="alert alert-info" style="margin-top: 10px;">
-                            <strong>📧 Free Hosting Notice:</strong> SMTP is blocked on free hosting services. Emails will be simulated for testing. Upgrade to paid hosting (Heroku, DigitalOcean, AWS) for real email delivery.
+                            <strong>📧 Real Emails on Free Hosting:</strong> 
+                            SMTP is blocked, but you can send real emails using HTTP APIs! 
+                            <br><br>
+                            <strong>Quick Setup:</strong>
+                            <br>1. Get free API key: <a href="https://resend.com/api-keys" target="_blank">Resend (3000/month)</a> or <a href="https://app.sendgrid.com/settings/api_keys" target="_blank">SendGrid (100/day)</a>
+                            <br>2. Add to Render environment: <code>RESEND_API_KEY=your_key</code>
+                            <br>3. Restart app → Real emails work!
                         </div>
                     </div>
 

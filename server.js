@@ -5439,6 +5439,67 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
   }
 });
 
+// Get current shop info from Shopify admin
+app.get('/api/current-shop', async (req, res) => {
+  try {
+    const shop = req.query.shop || req.headers['x-shopify-shop-domain'] || 'unknown';
+    const host = req.query.host || req.headers['x-shopify-host'] || 'unknown';
+    
+    res.json({
+      success: true,
+      detectedShop: shop,
+      host: host,
+      headers: {
+        'x-shopify-shop-domain': req.headers['x-shopify-shop-domain'],
+        'x-shopify-host': req.headers['x-shopify-host'],
+        'referer': req.headers.referer
+      },
+      query: req.query
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List all shop settings (for debugging)
+app.get('/api/debug/all-shops', async (req, res) => {
+  try {
+    const db = new ShopifyMetafieldsDB();
+    const allMetafields = await db.getAllMetafields('*'); // This won't work, let me fix it
+    
+    // Instead, let's check common shop domains
+    const testDomains = [
+      'test-festival-popup.myshopify.com',
+      'test-shop.myshopify.com', 
+      'test-festival-popup',
+      'your-shop.myshopify.com'
+    ];
+    
+    const results = {};
+    
+    for (const domain of testDomains) {
+      try {
+        const settings = await ShopSettings.getShopSettings(domain);
+        results[domain] = {
+          hasSettings: !!settings,
+          emailEnabled: settings?.emailSettings?.enabled || false,
+          fromEmail: settings?.emailSettings?.fromEmail || '',
+          hasPassword: !!settings?.emailSettings?.encryptedPassword
+        };
+      } catch (error) {
+        results[domain] = { error: error.message };
+      }
+    }
+    
+    res.json({
+      success: true,
+      shopDomains: results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to check email settings
 app.get('/api/shop-settings/:shopDomain/debug', async (req, res) => {
   try {

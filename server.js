@@ -153,20 +153,39 @@ let transporter = null;
  */
 async function createShopEmailTransporter(shopDomain) {
   try {
+    console.log(`🔍 DEBUG: Creating email transporter for shop: ${shopDomain}`);
+    
     const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    console.log(`🔍 DEBUG: Shop settings found:`, shopSettings ? 'YES' : 'NO');
     
     if (!shopSettings || !shopSettings.emailSettings.enabled) {
       console.log(`📧 No email settings configured for shop: ${shopDomain}`);
+      console.log(`🔍 DEBUG: Email enabled:`, shopSettings?.emailSettings?.enabled);
       return null;
     }
+    
+    console.log(`🔍 DEBUG: Email settings:`, {
+      enabled: shopSettings.emailSettings.enabled,
+      provider: shopSettings.emailSettings.provider,
+      fromEmail: shopSettings.emailSettings.fromEmail,
+      fromName: shopSettings.emailSettings.fromName,
+      hasEncryptedPassword: !!shopSettings.emailSettings.encryptedPassword
+    });
     
     const emailCredentials = shopSettings.getEmailCredentials();
     if (!emailCredentials) {
       console.log(`📧 Failed to get email credentials for shop: ${shopDomain}`);
+      console.log(`🔍 DEBUG: Encrypted password exists:`, !!shopSettings.emailSettings.encryptedPassword);
       return null;
     }
     
+    console.log(`🔍 DEBUG: Email credentials obtained:`, {
+      user: emailCredentials.user,
+      hasPassword: !!emailCredentials.pass
+    });
+    
     const smtpConfig = shopSettings.getSmtpConfig();
+    console.log(`🔍 DEBUG: SMTP config:`, smtpConfig);
     
     console.log(`📧 Creating email transporter for shop: ${shopDomain} using ${shopSettings.emailSettings.provider}`);
     
@@ -183,9 +202,21 @@ async function createShopEmailTransporter(shopDomain) {
       delete transporterConfig.secure;
     }
     
+    console.log(`🔍 DEBUG: Final transporter config:`, {
+      service: transporterConfig.service,
+      host: transporterConfig.host,
+      port: transporterConfig.port,
+      secure: transporterConfig.secure,
+      auth: {
+        user: transporterConfig.auth.user,
+        hasPass: !!transporterConfig.auth.pass
+      }
+    });
+    
     const shopTransporter = nodemailer.createTransport(transporterConfig);
     
     // Verify the connection
+    console.log(`🔍 DEBUG: Verifying email connection...`);
     await shopTransporter.verify();
     console.log(`✅ Email transporter verified for shop: ${shopDomain}`);
     
@@ -193,6 +224,7 @@ async function createShopEmailTransporter(shopDomain) {
     
   } catch (error) {
     console.error(`❌ Failed to create email transporter for shop ${shopDomain}:`, error.message);
+    console.error(`🔍 DEBUG: Full error:`, error);
     return null;
   }
 }
@@ -5482,9 +5514,38 @@ app.post('/api/shop-settings/:shopDomain/email/test', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error sending test email:', error);
+    console.error('🔍 DEBUG: Full error details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
+    });
+    
+    let errorMessage = 'Failed to send test email';
+    let errorDetails = error.message;
+    
+    // Provide more specific error messages
+    if (error.code === 'EAUTH') {
+      errorMessage = 'Authentication failed';
+      errorDetails = 'Invalid email credentials. Please check your email and password/app password.';
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'SMTP server not found';
+      errorDetails = 'Could not connect to email server. Please check your internet connection.';
+    } else if (error.code === 'ECONNECTION') {
+      errorMessage = 'Connection failed';
+      errorDetails = 'Could not connect to email server. Please check your SMTP settings.';
+    } else if (error.responseCode === 535) {
+      errorMessage = 'Authentication failed';
+      errorDetails = 'Invalid credentials. For Gmail, make sure you are using an App Password, not your regular password.';
+    }
+    
     res.status(500).json({ 
-      error: 'Failed to send test email',
-      details: error.message 
+      success: false,
+      error: errorMessage,
+      details: errorDetails,
+      code: error.code,
+      responseCode: error.responseCode
     });
   }
 });

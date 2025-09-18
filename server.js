@@ -21,15 +21,17 @@ async function sendEmailViaHTTP(emailOptions) {
     if (resendApiKey) {
       try {
         console.log('🔑 Using Resend API key for real email delivery');
+        console.log('📧 Using Resend verified domain:', fromEmail);
+        console.log('📧 From name:', fromName);
         
         // Resend requires verified domain for "from" address
-        // For testing, we'll use a default verified address
-        const fromEmail = emailOptions.from.includes('@') ? 
-          emailOptions.from : 
-          'noreply@resend.dev'; // Resend's default testing domain
+        // Extract the name from the original "from" field and use Resend's verified domain
+        const fromMatch = emailOptions.from.match(/^"?([^"<]+)"?\s*<([^>]+)>$/) || [null, emailOptions.from, emailOptions.from];
+        const fromName = fromMatch[1] || 'Festival Popup';
+        const fromEmail = 'onboarding@resend.dev'; // Resend's verified domain for testing
         
         const resendPayload = {
-          from: fromEmail,
+          from: `${fromName} <${fromEmail}>`,
           to: [emailOptions.to],
           subject: emailOptions.subject,
           html: emailOptions.html,

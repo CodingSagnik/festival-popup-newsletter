@@ -5552,16 +5552,38 @@ app.post('/api/shop-settings/:shopDomain/email/test', async (req, res) => {
     
     console.log(`📧 Testing email configuration for shop: ${shopDomain}`);
     
+    // Debug: Check settings step by step
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    console.log(`🔍 DEBUG: Shop settings enabled: ${shopSettings?.emailSettings?.enabled}`);
+    console.log(`🔍 DEBUG: Has encrypted password: ${!!shopSettings?.emailSettings?.encryptedPassword}`);
+    
+    if (shopSettings?.emailSettings?.enabled) {
+      try {
+        const credentials = shopSettings.getEmailCredentials();
+        console.log(`🔍 DEBUG: Credentials obtained: ${!!credentials}`);
+        console.log(`🔍 DEBUG: User: ${credentials?.user}`);
+        console.log(`🔍 DEBUG: Has password: ${!!credentials?.pass}`);
+      } catch (credError) {
+        console.error(`🔍 DEBUG: Credential error: ${credError.message}`);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Failed to decrypt email credentials',
+          details: credError.message 
+        });
+      }
+    }
+    
     // Get shop email transporter
     const shopTransporter = await createShopEmailTransporter(shopDomain);
     
     if (!shopTransporter) {
-      return res.status(400).json({ 
-        error: 'Email not configured for this shop. Please set up email settings first.' 
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to create email transporter. Check server logs for details.' 
       });
     }
     
-    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    // shopSettings already declared above, no need to redeclare
     
     // Send test email
     const testEmailOptions = {

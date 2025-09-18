@@ -200,6 +200,11 @@ async function createShopEmailTransporter(shopDomain) {
       delete transporterConfig.host;
       delete transporterConfig.port;
       delete transporterConfig.secure;
+      
+      // Add connection timeout and retry settings for cloud hosting
+      transporterConfig.connectionTimeout = 60000; // 60 seconds
+      transporterConfig.greetingTimeout = 30000; // 30 seconds
+      transporterConfig.socketTimeout = 60000; // 60 seconds
     }
     
     console.log(`🔍 DEBUG: Final transporter config:`, {
@@ -215,10 +220,9 @@ async function createShopEmailTransporter(shopDomain) {
     
     const shopTransporter = nodemailer.createTransport(transporterConfig);
     
-    // Verify the connection
-    console.log(`🔍 DEBUG: Verifying email connection...`);
-    await shopTransporter.verify();
-    console.log(`✅ Email transporter verified for shop: ${shopDomain}`);
+    // Skip verification for now to avoid timeout issues
+    console.log(`🔍 DEBUG: Skipping verification to avoid timeout issues on Render`);
+    console.log(`✅ Email transporter created for shop: ${shopDomain}`);
     
     return shopTransporter;
     
@@ -5614,9 +5618,31 @@ app.post('/api/shop-settings/:shopDomain/email/test', async (req, res) => {
       `
     };
     
-    await shopTransporter.sendMail(testEmailOptions);
+    // Try sending with retry mechanism
+    let emailSent = false;
+    let lastError = null;
     
-    console.log(`✅ Test email sent successfully for shop: ${shopDomain} to: ${testEmail}`);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`📧 Attempt ${attempt}/3: Sending test email...`);
+        await shopTransporter.sendMail(testEmailOptions);
+        emailSent = true;
+        console.log(`✅ Test email sent successfully for shop: ${shopDomain} to: ${testEmail}`);
+        break;
+      } catch (sendError) {
+        lastError = sendError;
+        console.log(`❌ Attempt ${attempt}/3 failed: ${sendError.message}`);
+        
+        if (attempt < 3) {
+          console.log(`⏳ Waiting 2 seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+    
+    if (!emailSent) {
+      throw lastError;
+    }
     
     res.json({ 
       success: true, 

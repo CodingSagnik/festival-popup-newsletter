@@ -620,23 +620,35 @@ class ShopSettings {
     const configs = {
       gmail: {
         host: 'smtp.gmail.com',
-        port: 587,
-        secure: false
+        port: 465, // Use SSL port for better cloud compatibility
+        secure: true, // Use SSL
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000
       },
       outlook: {
         host: 'smtp-mail.outlook.com',
         port: 587,
-        secure: false
+        secure: false,
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000
       },
       yahoo: {
         host: 'smtp.mail.yahoo.com',
         port: 587,
-        secure: false
+        secure: false,
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000
       },
       custom: {
         host: this.emailSettings.smtpHost,
         port: this.emailSettings.smtpPort,
-        secure: this.emailSettings.secure
+        secure: this.emailSettings.secure,
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000
       }
     };
     

@@ -102,9 +102,11 @@ A revolutionary Shopify extension that brings AI-powered festival popup creation
    # Database
    MONGODB_URI=mongodb://localhost:27017/festival-popup
    
-   # Email (Gmail)
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASSWORD=your-app-password
+   # Email Service (RECOMMENDED: SendGrid for merchant email preservation)
+   SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
+   
+   # Email Service (Alternative: Resend)
+   RESEND_API_KEY=your_resend_api_key_here
    
    # Server
    PORT=3000
@@ -138,10 +140,26 @@ A revolutionary Shopify extension that brings AI-powered festival popup creation
 - **Display Frequency**: How often to show (once per session, daily, always)
 - **Popup Position**: Where popup appears on screen
 
-### **📧 Newsletter Settings**
+### **📧 Email & Newsletter Settings**
+
+#### **🥇 SendGrid Integration (RECOMMENDED)**
+- **Preserves merchant email addresses** - Use ANY email (Gmail, Yahoo, etc.)
+- **No domain verification required** - Works immediately
+- **Professional delivery** - High deliverability rates
+- **Free tier**: 100 emails/day (3,000/month)
+
+**Quick Setup:**
+1. Get API key: [SendGrid API Keys](https://app.sendgrid.com/settings/api_keys)
+2. Add to environment: `SENDGRID_API_KEY=SG.your_key_here`
+3. Configure email with your address in admin
+4. ✅ Emails sent FROM your configured address!
+
+#### **Newsletter Configuration**
 - **Enable Newsletter**: Include email signup
 - **Newsletter Title**: Header text
 - **Newsletter Subtitle**: Description text
+- **From Email**: Your email address (preserved with SendGrid)
+- **From Name**: Your store name
 
 ### **🎁 Offer Popup Settings**
 - **Enable Offer Popup**: Show offer-only popups

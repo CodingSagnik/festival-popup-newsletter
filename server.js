@@ -4,10 +4,10 @@ const cors = require('cors');
 // const mongoose = require('mongoose'); // Removed - using Shopify Metafields
 const nodemailer = require('nodemailer');
 
-// Real email service using Resend API (works on free hosting)
+// Real email service using HTTP APIs (works on free hosting)
 async function sendEmailViaHTTP(emailOptions) {
   try {
-    console.log('📧 Using Resend API for real email delivery');
+    console.log('📧 Using HTTP-based email service for real email delivery');
     console.log('📧 Email details:', {
       to: emailOptions.to,
       from: emailOptions.from,
@@ -15,65 +15,36 @@ async function sendEmailViaHTTP(emailOptions) {
       hasHtml: !!emailOptions.html
     });
     
-    // Option 1: Try Resend API (if API key is configured)
-    const resendApiKey = process.env.RESEND_API_KEY;
-    
-    if (resendApiKey) {
-      try {
-        console.log('🔑 Using Resend API key for real email delivery');
-        console.log('📧 Using Resend verified domain:', fromEmail);
-        console.log('📧 From name:', fromName);
-        
-        // Resend requires verified domain for "from" address
-        // Extract the name from the original "from" field and use Resend's verified domain
-        const fromMatch = emailOptions.from.match(/^"?([^"<]+)"?\s*<([^>]+)>$/) || [null, emailOptions.from, emailOptions.from];
-        const fromName = fromMatch[1] || 'Festival Popup';
-        const fromEmail = 'onboarding@resend.dev'; // Resend's verified domain for testing
-        
-        const resendPayload = {
-          from: `${fromName} <${fromEmail}>`,
-          to: [emailOptions.to],
-          subject: emailOptions.subject,
-          html: emailOptions.html,
-          text: emailOptions.text || 'Please enable HTML to view this email.'
-        };
-        
-        const response = await axios.post('https://api.resend.com/emails', resendPayload, {
-          headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        });
-        
-        console.log('✅ Real email sent via Resend API');
-        console.log('📧 Resend response:', response.data);
-        return { 
-          messageId: response.data.id,
-          service: 'resend',
-          real: true,
-          provider: 'Resend API'
-        };
-        
-      } catch (resendError) {
-        console.error('❌ Resend API failed:', resendError.response?.data || resendError.message);
-        // Fall through to simulation
-      }
-    }
-    
-    // Option 2: Try SendGrid API (if API key is configured)
+    // PRIORITY 1: Try SendGrid API (BEST - allows any sender email)
     const sendgridApiKey = process.env.SENDGRID_API_KEY;
     
-    if (sendgridApiKey) {
+    if (sendgridApiKey && sendgridApiKey !== 'your_sendgrid_api_key_here') {
       try {
-        console.log('🔑 Using SendGrid API key for real email delivery');
+        console.log('🥇 Using SendGrid API - preserves merchant email addresses');
+        
+        // Parse the from email to extract email and name
+        let fromEmail, fromName;
+        if (emailOptions.from.includes('<')) {
+          const match = emailOptions.from.match(/^"?([^"<]+)"?\s*<([^>]+)>$/);
+          fromName = match ? match[1].trim() : 'Festival Popup';
+          fromEmail = match ? match[2] : emailOptions.from;
+        } else {
+          fromEmail = emailOptions.from;
+          fromName = 'Festival Popup';
+        }
+        
+        console.log('📧 Preserving merchant email:', fromEmail);
+        console.log('📧 From name:', fromName);
         
         const sendgridPayload = {
           personalizations: [{
             to: [{ email: emailOptions.to }],
             subject: emailOptions.subject
           }],
-          from: { email: emailOptions.from },
+          from: { 
+            email: fromEmail,
+            name: fromName
+          },
           content: [{
             type: 'text/html',
             value: emailOptions.html
@@ -89,33 +60,83 @@ async function sendEmailViaHTTP(emailOptions) {
         });
         
         console.log('✅ Real email sent via SendGrid API');
+        console.log('📧 Merchant email preserved:', fromEmail);
         return { 
           messageId: `sendgrid-${Date.now()}`,
           service: 'sendgrid',
-          real: true
+          real: true,
+          provider: 'SendGrid API',
+          fromEmail: fromEmail
         };
         
       } catch (sendgridError) {
         console.error('❌ SendGrid API failed:', sendgridError.response?.data || sendgridError.message);
-        // Fall through to simulation
+        console.log('📧 Falling back to Resend API...');
       }
     }
     
-    // Option 3: Simulation (if no API keys configured)
+    // PRIORITY 2: Try Resend API (fallback - requires domain verification)
+    const resendApiKey = process.env.RESEND_API_KEY;
+    
+    if (resendApiKey && resendApiKey !== 'your_resend_api_key_here') {
+      try {
+        console.log('🥈 Using Resend API (will use verified domain)');
+        
+        // Extract name but use Resend's verified domain
+        const fromMatch = emailOptions.from.match(/^"?([^"<]+)"?\s*<([^>]+)>$/) || [null, 'Festival Popup', emailOptions.from];
+        const fromName = fromMatch[1] || 'Festival Popup';
+        const resendFromEmail = 'onboarding@resend.dev'; // Resend's verified domain
+        
+        console.log('⚠️ Using Resend verified domain:', resendFromEmail);
+        console.log('📧 Original merchant email will be in reply-to:', emailOptions.from);
+        
+        const resendPayload = {
+          from: `${fromName} <${resendFromEmail}>`,
+          to: [emailOptions.to],
+          subject: emailOptions.subject,
+          html: emailOptions.html,
+          text: emailOptions.text || 'Please enable HTML to view this email.',
+          reply_to: emailOptions.from // Preserve merchant email as reply-to
+        };
+        
+        const response = await axios.post('https://api.resend.com/emails', resendPayload, {
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        });
+        
+        console.log('✅ Real email sent via Resend API');
+        console.log('📧 Merchant email preserved in reply-to');
+        return { 
+          messageId: response.data.id,
+          service: 'resend',
+          real: true,
+          provider: 'Resend API',
+          note: 'Sent from verified domain, merchant email in reply-to'
+        };
+        
+      } catch (resendError) {
+        console.error('❌ Resend API failed:', resendError.response?.data || resendError.message);
+      }
+    }
+    
+    // PRIORITY 3: Simulation (if no API keys configured)
     console.log('📧 No email API keys configured, using simulation');
     console.log('🔧 To send real emails on free hosting, add one of these to your environment:');
-    console.log('   RESEND_API_KEY=your_resend_api_key (Free: 3000 emails/month)');
-    console.log('   SENDGRID_API_KEY=your_sendgrid_api_key (Free: 100 emails/day)');
+    console.log('   🥇 SENDGRID_API_KEY=your_sendgrid_api_key (BEST - preserves merchant emails)');
+    console.log('   🥈 RESEND_API_KEY=your_resend_api_key (fallback - uses verified domain)');
     console.log('');
     console.log('📝 Quick setup guides:');
-    console.log('   Resend: https://resend.com/api-keys');
     console.log('   SendGrid: https://app.sendgrid.com/settings/api_keys');
+    console.log('   Resend: https://resend.com/api-keys');
     
     return { 
       messageId: `simulated-${Date.now()}`,
       simulated: true,
       service: 'simulation',
-      note: 'Add RESEND_API_KEY or SENDGRID_API_KEY environment variable for real emails'
+      note: 'Add SENDGRID_API_KEY (recommended) or RESEND_API_KEY for real emails'
     };
     
   } catch (error) {

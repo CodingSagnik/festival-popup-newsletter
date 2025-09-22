@@ -557,16 +557,22 @@ class ShopSettings {
   static async updateEmailSettings(shop, emailData) {
     const { fromEmail, fromName, password, provider = 'gmail', smtpHost, smtpPort, secure = true } = emailData;
     
-    if (!fromEmail || !fromName || !password) {
-      throw new Error('Email, name, and password are required');
+    // For Mailjet, password is optional since we use app-level API keys
+    if (!fromEmail || !fromName) {
+      throw new Error('Email and name are required');
+    }
+    
+    // Password is required for SMTP providers but optional for HTTP API providers like Mailjet
+    if (provider !== 'mailjet' && !password) {
+      throw new Error('Password is required for this email provider');
     }
     
     try {
       // Import encryption utility
       const { encrypt } = require('./encryption');
       
-      // Encrypt the password
-      const encryptedPassword = encrypt(password);
+      // Encrypt the password (if provided)
+      const encryptedPassword = password ? encrypt(password) : '';
       
       const updateData = {
         shop,
@@ -666,7 +672,20 @@ class ShopSettings {
   }
 
   getEmailCredentials() {
-    if (!this.emailSettings.enabled || !this.emailSettings.encryptedPassword) {
+    if (!this.emailSettings.enabled) {
+      return null;
+    }
+    
+    // For Mailjet, we don't need encrypted password since we use app-level API keys
+    if (this.emailSettings.provider === 'mailjet') {
+      return {
+        user: this.emailSettings.fromEmail,
+        pass: 'mailjet-app-level' // Placeholder - actual API keys are in environment
+      };
+    }
+    
+    // For other providers, decrypt the password
+    if (!this.emailSettings.encryptedPassword) {
       return null;
     }
     

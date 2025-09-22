@@ -1384,9 +1384,6 @@
                             <p style="margin: 0; color: #6d7175; font-size: 14px;">
                                 Emails will be sent from: <strong>${settings.fromName}</strong> &lt;${settings.fromEmail}&gt;
                             </p>
-                            <p style="margin: 4px 0 0 0; color: #6d7175; font-size: 14px;">
-                                Provider: <strong>${settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1)}</strong>
-                            </p>
                         </div>
                     ` : `
                         <div style="margin-bottom: 16px;">
@@ -1396,82 +1393,40 @@
                         </div>
                     `}
 
-                    <form class="email-form" onsubmit="saveEmailSettings(event)">
-                        <div class="provider-selector">
-                            <div class="provider-option ${(!settings || settings.provider === 'gmail') ? 'selected' : ''}" 
-                                 onclick="selectProvider('gmail')">
-                                <span class="icon">📧</span>
-                                <span class="name">Gmail</span>
-                            </div>
-                            <div class="provider-option ${(settings && settings.provider === 'outlook') ? 'selected' : ''}" 
-                                 onclick="selectProvider('outlook')">
-                                <span class="icon">📨</span>
-                                <span class="name">Outlook</span>
-                            </div>
-                            <div class="provider-option ${(settings && settings.provider === 'yahoo') ? 'selected' : ''}" 
-                                 onclick="selectProvider('yahoo')">
-                                <span class="icon">📩</span>
-                                <span class="name">Yahoo</span>
-                            </div>
-                            <div class="provider-option ${(settings && settings.provider === 'custom') ? 'selected' : ''}" 
-                                 onclick="selectProvider('custom')">
-                                <span class="icon">⚙️</span>
-                                <span class="name">Custom</span>
-                            </div>
+                    <!-- Simplified Email Configuration - Mailjet Only -->
+                    <div style="background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="font-size: 20px;">🚀</span>
+                            <strong style="color: #1976d2;">Powered by Mailjet</strong>
                         </div>
+                        <div style="color: #1565c0; font-size: 14px; line-height: 1.4;">
+                            ✅ 200 emails/day forever free<br>
+                            ✅ Professional email delivery<br>
+                            ✅ No setup complexity - just enter your email details below
+                        </div>
+                    </div>
 
+                    <form class="email-form" onsubmit="saveEmailSettings(event)">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="fromEmail">From Email *</label>
+                                <label for="fromEmail">Your Email Address *</label>
                                 <input type="email" id="fromEmail" name="fromEmail" 
                                        value="${settings ? settings.fromEmail || '' : ''}" 
                                        placeholder="your-store@gmail.com" required>
+                                <div class="help-text">Customers will see emails from this address</div>
                             </div>
                             <div class="form-group">
-                                <label for="fromName">From Name *</label>
+                                <label for="fromName">Your Store Name *</label>
                                 <input type="text" id="fromName" name="fromName" 
                                        value="${settings ? settings.fromName || '' : ''}" 
                                        placeholder="Your Store Name" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password">Email Password / App Password *</label>
-                            <input type="password" id="password" name="password" 
-                                   placeholder="Enter your email password" required>
-                            <div class="help-text" id="password-help">
-                                For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>
-                            </div>
-                        </div>
-
-                        <div class="custom-smtp" id="custom-smtp-settings" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-                            <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Custom SMTP Settings</h4>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="smtpHost">SMTP Host *</label>
-                                    <input type="text" id="smtpHost" name="smtpHost" 
-                                           value="${settings ? settings.smtpHost || '' : ''}" 
-                                           placeholder="smtp.yourdomain.com">
-                                </div>
-                                <div class="form-group">
-                                    <label for="smtpPort">SMTP Port *</label>
-                                    <input type="number" id="smtpPort" name="smtpPort" 
-                                           value="${settings ? settings.smtpPort || '' : ''}" 
-                                           placeholder="587" min="1" max="65535">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <input type="checkbox" id="secure" name="secure" 
-                                           ${(!settings || settings.secure !== false) ? 'checked' : ''}> 
-                                    Use SSL/TLS encryption
-                                </label>
+                                <div class="help-text">The name customers will see in their inbox</div>
                             </div>
                         </div>
 
                         <div class="email-actions">
                             <button type="submit" class="btn-email primary">
-                                💾 Save Settings
+                                💾 Save Email Settings
                             </button>
                             <button type="button" class="btn-email secondary" onclick="showTestEmailModal()">
                                 📧 Send Test Email
@@ -1506,76 +1461,21 @@
                     </div>
                 </div>
             `;
-
-            // Set the selected provider
-            if (settings && settings.provider) {
-                selectProvider(settings.provider);
-            }
         }
 
-        function selectProvider(provider) {
-            // Update UI
-            document.querySelectorAll('.provider-option').forEach(el => el.classList.remove('selected'));
-            document.querySelector(`[onclick="selectProvider('${provider}')"]`).classList.add('selected');
 
-            // Show/hide custom SMTP settings
-            const customSmtpSection = document.getElementById('custom-smtp-settings');
-            if (customSmtpSection) {
-                if (provider === 'custom') {
-                    customSmtpSection.style.display = 'block';
-                } else {
-                    customSmtpSection.style.display = 'none';
-                }
-            }
-
-            // Update help text
-            const helpText = document.getElementById('password-help');
-            switch (provider) {
-                case 'gmail':
-                    helpText.innerHTML = 'For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>';
-                    break;
-                case 'outlook':
-                    helpText.textContent = 'For Outlook: Use your regular email password.';
-                    break;
-                case 'yahoo':
-                    helpText.textContent = 'For Yahoo: Use App Password, not your regular password.';
-                    break;
-                case 'custom':
-                    helpText.textContent = 'Enter your SMTP server password or API key.';
-                    break;
-            }
-        }
 
         async function saveEmailSettings(event) {
             event.preventDefault();
             
             const formData = new FormData(event.target);
-            const selectedProvider = document.querySelector('.provider-option.selected .name').textContent.toLowerCase();
             
             const settings = {
                 fromEmail: formData.get('fromEmail'),
                 fromName: formData.get('fromName'),
-                password: formData.get('password'),
-                provider: selectedProvider
+                password: 'mailjet-app-level', // Dummy password for Mailjet
+                provider: 'mailjet' // Always use Mailjet
             };
-
-            // Add custom SMTP settings if provider is custom
-            if (selectedProvider === 'custom') {
-                settings.smtpHost = formData.get('smtpHost');
-                settings.smtpPort = parseInt(formData.get('smtpPort'));
-                settings.secure = formData.get('secure') === 'on';
-                
-                // Validate custom SMTP settings
-                if (!settings.smtpHost || !settings.smtpPort) {
-                    showEmailMessage('SMTP host and port are required for custom provider.', 'error');
-                    return;
-                }
-                
-                if (settings.smtpPort < 1 || settings.smtpPort > 65535) {
-                    showEmailMessage('Invalid SMTP port number.', 'error');
-                    return;
-                }
-            }
 
             showEmailMessage('Saving email settings...', 'info');
 

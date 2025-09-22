@@ -19,6 +19,7 @@ async function sendEmailViaHTTP(emailOptions) {
     });
     
     // PRIORITY 1: Try Mailjet API (BEST - 200 emails/day forever, preserves merchant emails)
+    // Uses app-level API keys but preserves merchant email addresses
     const mailjetApiKey = process.env.MAILJET_API_KEY;
     const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
     

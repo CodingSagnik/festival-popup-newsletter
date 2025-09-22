@@ -618,6 +618,16 @@ class ShopSettings {
   // Helper methods (same as original)
   getSmtpConfig() {
     const configs = {
+      mailjet: {
+        // Mailjet uses HTTP API, not SMTP, but we include this for consistency
+        host: 'in-v3.mailjet.com',
+        port: 587,
+        secure: false,
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000,
+        isHttpApi: true // Flag to indicate this uses HTTP API
+      },
       gmail: {
         host: 'smtp.gmail.com',
         port: 465, // Use SSL port for better cloud compatibility

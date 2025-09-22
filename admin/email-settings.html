@@ -391,17 +391,17 @@
                             <strong>📧 Real Emails on Free Hosting:</strong> 
                             SMTP is blocked, but you can send real emails using HTTP APIs! 
                             <br><br>
-                            <strong>🥇 RECOMMENDED: Mailjet (Best Free Plan)</strong>
-                            <br>1. Get free API keys: <a href="https://app.mailjet.com/account/apikeys" target="_blank">Mailjet (200/day forever)</a>
-                            <br>2. Add to environment: <code>MAILJET_API_KEY</code> & <code>MAILJET_SECRET_KEY</code>
-                            <br>3. ✅ Emails sent FROM your configured email address!
+                            <strong>🥇 RECOMMENDED: Mailjet (App-Level Integration)</strong>
+                            <br>✅ Just enter your email address - the app handles API keys automatically
+                            <br>✅ 200 emails/day forever free (best in market)
+                            <br>✅ Emails sent FROM your configured email address!
+                            <br>✅ No domain verification required
                             <br><br>
-                            <strong>🥈 Alternative: Resend</strong>
-                            <br>1. Get API key: <a href="https://resend.com/api-keys" target="_blank">Resend (3000/month)</a>
-                            <br>2. Add to environment: <code>RESEND_API_KEY=your_key</code>
-                            <br>3. ⚠️ Emails sent from verified domain, your email in reply-to
+                            <strong>🥈 Alternative: Traditional SMTP</strong>
+                            <br>Use Gmail, Outlook, or Yahoo with app passwords
+                            <br>⚠️ May not work on all hosting platforms
                             <br><br>
-                            <strong>💡 Why Mailjet is Better:</strong> 200 emails/day forever + preserves your email address!
+                            <strong>💡 Mailjet Advantage:</strong> Professional delivery + your email address preserved!
                         </div>
                     </div>
 
@@ -552,7 +552,7 @@
             
             // Update password help text
             const helpTexts = {
-                mailjet: 'For Mailjet: Get your API Key and Secret Key from <a href="https://app.mailjet.com/account/apikeys" target="_blank">Mailjet API Keys</a>. Enter API Key as email and Secret Key as password.',
+                mailjet: 'For Mailjet: This uses the app-level API keys configured by the developer. Just enter your email address and any password - Mailjet will use the app credentials automatically.',
                 gmail: 'For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>',
                 outlook: 'For Outlook: Use your regular email password',
                 yahoo: 'For Yahoo: Use App Password. Generate one in your Yahoo account security settings',

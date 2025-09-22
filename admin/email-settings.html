@@ -334,97 +334,32 @@
         <div class="card">
             <div class="card-header">
                 <h2>Email Configuration</h2>
-                <p>Choose your email provider and enter your credentials</p>
+                <p>Configure your email settings for sending newsletters and festival offers</p>
             </div>
             <div class="card-body">
                 <form id="email-form">
-                    <div class="form-group">
-                        <label>Email Provider</label>
-                        <div class="provider-grid">
-                            <div class="provider-option" data-provider="mailjet">
-                                <div style="font-size: 24px; margin-bottom: 8px;">🚀</div>
-                                <span>Mailjet</span>
-                            </div>
-                            <div class="provider-option" data-provider="gmail">
-                                <div style="font-size: 24px; margin-bottom: 8px;">📧</div>
-                                <span>Gmail</span>
-                            </div>
-                            <div class="provider-option" data-provider="outlook">
-                                <div style="font-size: 24px; margin-bottom: 8px;">📨</div>
-                                <span>Outlook</span>
-                            </div>
-                            <div class="provider-option" data-provider="yahoo">
-                                <div style="font-size: 24px; margin-bottom: 8px;">📩</div>
-                                <span>Yahoo</span>
-                            </div>
-                            <div class="provider-option" data-provider="custom">
-                                <div style="font-size: 24px; margin-bottom: 8px;">⚙️</div>
-                                <span>Custom SMTP</span>
-                            </div>
-                        </div>
+                    <!-- Simplified Email Configuration - Mailjet Only -->
+                    <div class="alert alert-info" style="margin-bottom: 25px;">
+                        <strong>🚀 Powered by Mailjet</strong>
+                        <br>✅ 200 emails/day forever free
+                        <br>✅ Professional email delivery
+                        <br>✅ No setup complexity - just enter your email details below
                     </div>
 
                     <div class="form-row">
                         <div class="form-col">
                             <div class="form-group">
-                                <label for="fromEmail">From Email Address *</label>
+                                <label for="fromEmail">Your Email Address *</label>
                                 <input type="email" id="fromEmail" name="fromEmail" required placeholder="your-store@gmail.com">
-                                <div class="help-text">The email address that customers will see emails from</div>
+                                <div class="help-text">Customers will see emails from this address</div>
                             </div>
                         </div>
                         <div class="form-col">
                             <div class="form-group">
-                                <label for="fromName">From Name *</label>
+                                <label for="fromName">Your Store Name *</label>
                                 <input type="text" id="fromName" name="fromName" required placeholder="Your Store Name">
-                                <div class="help-text">The name that customers will see in their inbox</div>
+                                <div class="help-text">The name customers will see in their inbox</div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="password">Email Password / App Password *</label>
-                        <input type="password" id="password" name="password" required placeholder="Enter your email password">
-                        <div class="help-text" id="password-help">
-                            For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>
-                        </div>
-                        <div class="alert alert-info" style="margin-top: 10px;">
-                            <strong>📧 Real Emails on Free Hosting:</strong> 
-                            SMTP is blocked, but you can send real emails using HTTP APIs! 
-                            <br><br>
-                            <strong>🥇 RECOMMENDED: Mailjet (App-Level Integration)</strong>
-                            <br>✅ Just enter your email address - the app handles API keys automatically
-                            <br>✅ 200 emails/day forever free (best in market)
-                            <br>✅ Emails sent FROM your configured email address!
-                            <br>✅ No domain verification required
-                            <br><br>
-                            <strong>🥈 Alternative: Traditional SMTP</strong>
-                            <br>Use Gmail, Outlook, or Yahoo with app passwords
-                            <br>⚠️ May not work on all hosting platforms
-                            <br><br>
-                            <strong>💡 Mailjet Advantage:</strong> Professional delivery + your email address preserved!
-                        </div>
-                    </div>
-
-                    <div class="custom-smtp" id="custom-smtp-settings">
-                        <h4 style="margin-bottom: 15px;">Custom SMTP Settings</h4>
-                        <div class="form-row">
-                            <div class="form-col">
-                                <div class="form-group">
-                                    <label for="smtpHost">SMTP Host *</label>
-                                    <input type="text" id="smtpHost" name="smtpHost" placeholder="smtp.yourdomain.com">
-                                </div>
-                            </div>
-                            <div class="form-col">
-                                <div class="form-group">
-                                    <label for="smtpPort">SMTP Port *</label>
-                                    <input type="number" id="smtpPort" name="smtpPort" placeholder="587" min="1" max="65535">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="secure" name="secure" checked> Use SSL/TLS encryption
-                            </label>
                         </div>
                     </div>
 
@@ -492,7 +427,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const shopDomain = urlParams.get('shop') || 'test-festival-popup.myshopify.com';
         
-        let selectedProvider = 'mailjet';
         let emailConfigured = false;
         
         // Initialize the page
@@ -507,13 +441,6 @@
         });
         
         function setupEventListeners() {
-            // Provider selection
-            document.querySelectorAll('.provider-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    selectProvider(this.dataset.provider);
-                });
-            });
-            
             // Email form submission
             document.getElementById('email-form').addEventListener('submit', saveEmailSettings);
             
@@ -533,34 +460,7 @@
             document.getElementById('disable-email-btn').addEventListener('click', disableEmail);
         }
         
-        function selectProvider(provider) {
-            selectedProvider = provider;
-            
-            // Update UI
-            document.querySelectorAll('.provider-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-            document.querySelector(`[data-provider="${provider}"]`).classList.add('selected');
-            
-            // Show/hide custom SMTP settings
-            const customSmtp = document.getElementById('custom-smtp-settings');
-            if (provider === 'custom') {
-                customSmtp.classList.add('show');
-            } else {
-                customSmtp.classList.remove('show');
-            }
-            
-            // Update password help text
-            const helpTexts = {
-                mailjet: 'For Mailjet: This uses the app-level API keys configured by the developer. Just enter your email address and any password - Mailjet will use the app credentials automatically.',
-                gmail: 'For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>',
-                outlook: 'For Outlook: Use your regular email password',
-                yahoo: 'For Yahoo: Use App Password. Generate one in your Yahoo account security settings',
-                custom: 'Enter the password for your custom SMTP server'
-            };
-            
-            document.getElementById('password-help').innerHTML = helpTexts[provider];
-        }
+
         
         async function loadEmailSettings() {
             try {
@@ -580,12 +480,6 @@
                         // Populate form with existing settings
                         document.getElementById('fromEmail').value = settings.emailSettings.fromEmail || '';
                         document.getElementById('fromName').value = settings.emailSettings.fromName || '';
-                        document.getElementById('smtpHost').value = settings.emailSettings.smtpHost || '';
-                        document.getElementById('smtpPort').value = settings.emailSettings.smtpPort || '';
-                        document.getElementById('secure').checked = settings.emailSettings.secure !== false;
-                        
-                        // Select provider
-                        selectProvider(settings.emailSettings.provider || 'gmail');
                         
                         // Enable test button
                         document.getElementById('test-email-btn').disabled = false;
@@ -633,20 +527,10 @@
                 const emailData = {
                     fromEmail: formData.get('fromEmail'),
                     fromName: formData.get('fromName'),
-                    password: formData.get('password'),
-                    provider: selectedProvider,
-                    secure: formData.get('secure') === 'on'
+                    password: 'mailjet-app-level', // Dummy password for Mailjet
+                    provider: 'mailjet', // Always use Mailjet
+                    secure: true
                 };
-                
-                if (selectedProvider === 'custom') {
-                    emailData.smtpHost = formData.get('smtpHost');
-                    emailData.smtpPort = parseInt(formData.get('smtpPort'));
-                    
-                    if (!emailData.smtpHost || !emailData.smtpPort) {
-                        showAlert('SMTP host and port are required for custom provider', 'error');
-                        return;
-                    }
-                }
                 
                 const response = await fetch(`/api/shop-settings/${shopDomain}/email`, {
                     method: 'POST',
@@ -665,8 +549,7 @@
                     document.getElementById('test-email-btn').disabled = false;
                     document.getElementById('disable-email-btn').style.display = 'inline-block';
                     
-                    // Clear password field for security
-                    document.getElementById('password').value = '';
+
                 } else {
                     showAlert(data.error || 'Failed to save email settings', 'error');
                 }

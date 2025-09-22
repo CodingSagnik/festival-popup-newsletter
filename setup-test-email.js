@@ -7,7 +7,7 @@ async function setupTestEmailSettings() {
     const shopDomain = 'test-festival-popup.myshopify.com';
     const testEmailConfig = {
       enabled: true,
-      provider: 'sendgrid', // This will use HTTP API
+      provider: 'mailjet', // This will use HTTP API
       fromEmail: 'raysagnik04@gmail.com', // Your merchant email
       fromName: 'Festival Popup Store',
       smtpHost: '', // Not needed for HTTP API
@@ -54,8 +54,8 @@ async function setupTestEmailSettings() {
         console.log('📧 Service Used:', testResponse.data.service);
         console.log('🔧 Provider:', testResponse.data.provider);
         
-        if (testResponse.data.service === 'sendgrid') {
-          console.log('✅ SUCCESS: SendGrid preserved merchant email!');
+        if (testResponse.data.service === 'mailjet') {
+          console.log('✅ SUCCESS: Mailjet preserved merchant email!');
           console.log('📧 From Email:', testResponse.data.fromEmail);
         } else if (testResponse.data.service === 'resend') {
           console.log('⚠️ FALLBACK: Resend used (merchant email in reply-to)');

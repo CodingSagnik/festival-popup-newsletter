@@ -102,11 +102,15 @@ A revolutionary Shopify extension that brings AI-powered festival popup creation
    # Database
    MONGODB_URI=mongodb://localhost:27017/festival-popup
    
-   # Email Service (RECOMMENDED: SendGrid for merchant email preservation)
-   SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
+   # Email Service (RECOMMENDED: Mailjet - 200 emails/day forever)
+   MAILJET_API_KEY=your_mailjet_api_key_here
+   MAILJET_SECRET_KEY=your_mailjet_secret_key_here
    
    # Email Service (Alternative: Resend)
    RESEND_API_KEY=your_resend_api_key_here
+   
+   # Email Service (Alternative: SendGrid)
+   SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
    
    # Server
    PORT=3000
@@ -142,15 +146,15 @@ A revolutionary Shopify extension that brings AI-powered festival popup creation
 
 ### **📧 Email & Newsletter Settings**
 
-#### **🥇 SendGrid Integration (RECOMMENDED)**
+#### **🥇 Mailjet Integration (RECOMMENDED)**
 - **Preserves merchant email addresses** - Use ANY email (Gmail, Yahoo, etc.)
 - **No domain verification required** - Works immediately
 - **Professional delivery** - High deliverability rates
-- **Free tier**: 100 emails/day (3,000/month)
+- **Best free tier**: 200 emails/day forever (6,000/month)
 
 **Quick Setup:**
-1. Get API key: [SendGrid API Keys](https://app.sendgrid.com/settings/api_keys)
-2. Add to environment: `SENDGRID_API_KEY=SG.your_key_here`
+1. Get API keys: [Mailjet API Keys](https://app.mailjet.com/account/apikeys)
+2. Add to environment: `MAILJET_API_KEY=your_api_key` & `MAILJET_SECRET_KEY=your_secret_key`
 3. Configure email with your address in admin
 4. ✅ Emails sent FROM your configured address!
 

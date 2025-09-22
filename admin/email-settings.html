@@ -341,6 +341,10 @@
                     <div class="form-group">
                         <label>Email Provider</label>
                         <div class="provider-grid">
+                            <div class="provider-option" data-provider="mailjet">
+                                <div style="font-size: 24px; margin-bottom: 8px;">🚀</div>
+                                <span>Mailjet</span>
+                            </div>
                             <div class="provider-option" data-provider="gmail">
                                 <div style="font-size: 24px; margin-bottom: 8px;">📧</div>
                                 <span>Gmail</span>
@@ -387,17 +391,17 @@
                             <strong>📧 Real Emails on Free Hosting:</strong> 
                             SMTP is blocked, but you can send real emails using HTTP APIs! 
                             <br><br>
-                            <strong>🥇 RECOMMENDED: SendGrid (Preserves Your Email)</strong>
-                            <br>1. Get free API key: <a href="https://app.sendgrid.com/settings/api_keys" target="_blank">SendGrid (100/day)</a>
-                            <br>2. Add to Render: <code>SENDGRID_API_KEY=your_key</code>
+                            <strong>🥇 RECOMMENDED: Mailjet (Best Free Plan)</strong>
+                            <br>1. Get free API keys: <a href="https://app.mailjet.com/account/apikeys" target="_blank">Mailjet (200/day forever)</a>
+                            <br>2. Add to environment: <code>MAILJET_API_KEY</code> & <code>MAILJET_SECRET_KEY</code>
                             <br>3. ✅ Emails sent FROM your configured email address!
                             <br><br>
                             <strong>🥈 Alternative: Resend</strong>
                             <br>1. Get API key: <a href="https://resend.com/api-keys" target="_blank">Resend (3000/month)</a>
-                            <br>2. Add to Render: <code>RESEND_API_KEY=your_key</code>
+                            <br>2. Add to environment: <code>RESEND_API_KEY=your_key</code>
                             <br>3. ⚠️ Emails sent from verified domain, your email in reply-to
                             <br><br>
-                            <strong>💡 Why SendGrid is Better:</strong> Merchants can use ANY email address as sender!
+                            <strong>💡 Why Mailjet is Better:</strong> 200 emails/day forever + preserves your email address!
                         </div>
                     </div>
 
@@ -488,7 +492,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const shopDomain = urlParams.get('shop') || 'test-festival-popup.myshopify.com';
         
-        let selectedProvider = 'gmail';
+        let selectedProvider = 'mailjet';
         let emailConfigured = false;
         
         // Initialize the page
@@ -548,6 +552,7 @@
             
             // Update password help text
             const helpTexts = {
+                mailjet: 'For Mailjet: Get your API Key and Secret Key from <a href="https://app.mailjet.com/account/apikeys" target="_blank">Mailjet API Keys</a>. Enter API Key as email and Secret Key as password.',
                 gmail: 'For Gmail: Use App Password, not your regular password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank">Google App Passwords</a>',
                 outlook: 'For Outlook: Use your regular email password',
                 yahoo: 'For Yahoo: Use App Password. Generate one in your Yahoo account security settings',

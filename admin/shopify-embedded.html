@@ -1361,38 +1361,7 @@
 
             try {
                 const emailData = await makeAuthenticatedRequest(`/api/shop-settings/${shop}/email`);
-                console.log('📧 Email configuration response:', emailData);
-                
-                // Handle different response structures
-                let settings = null;
-                if (emailData) {
-                    if (emailData.success && emailData.settings) {
-                        settings = emailData.settings;
-                    } else if (emailData.enabled || emailData.fromEmail) {
-                        // Direct settings object
-                        settings = emailData;
-                    } else if (emailData.data) {
-                        // Settings in data property
-                        settings = emailData.data;
-                    }
-                }
-                
-                // If no settings found, try alternative endpoint
-                if (!settings) {
-                    console.log('📧 Trying alternative email configuration endpoint...');
-                    try {
-                        const altEmailData = await makeAuthenticatedRequest(`/api/shop-settings/${shop}`);
-                        console.log('📧 Alternative email configuration response:', altEmailData);
-                        if (altEmailData && altEmailData.email) {
-                            settings = altEmailData.email;
-                        }
-                    } catch (altError) {
-                        console.warn('📧 Alternative endpoint failed:', altError);
-                    }
-                }
-                
-                console.log('📧 Final processed settings:', settings);
-                displayEmailConfiguration(settings);
+                displayEmailConfiguration(emailData.success ? emailData.settings : null);
             } catch (error) {
                 console.error('Error loading email configuration:', error);
                 displayEmailConfiguration(null);
@@ -1401,37 +1370,26 @@
 
         function displayEmailConfiguration(settings) {
             const emailSection = document.getElementById('email-config-section');
-            
-            // More robust configuration check
-            const isConfigured = settings && (
-                (settings.enabled && settings.fromEmail) ||
-                (settings.fromEmail && settings.fromName) ||
-                (settings.provider && settings.fromEmail) ||
-                (settings.apiKey && settings.fromEmail)
-            );
+            const isConfigured = settings && settings.enabled && settings.fromEmail;
 
-            console.log('📧 Display configuration - isConfigured:', isConfigured, 'settings:', settings);
-            
             emailSection.innerHTML = `
                 <div class="email-config-card">
                     <div class="email-status ${isConfigured ? 'configured' : 'not-configured'}">
                         <div class="status-dot"></div>
-                        ${isConfigured ? '✅ Email Configured' : '❌ Email Not Configured'}
+                        ${isConfigured ? 'Email Configured' : 'Email Not Configured'}
                     </div>
                     
                     ${isConfigured ? `
                         <div style="margin-bottom: 16px;">
                             <p style="margin: 0; color: #6d7175; font-size: 14px;">
-                                Emails will be sent from: <strong>${settings.fromName || 'Festival Popup'}</strong> &lt;${settings.fromEmail}&gt;
+                                Emails will be sent from: <strong>${settings.fromName}</strong> &lt;${settings.fromEmail}&gt;
                             </p>
-                            ${settings.provider ? `<p style="margin: 4px 0 0 0; color: #6d7175; font-size: 12px;">Provider: ${settings.provider}</p>` : ''}
                         </div>
                     ` : `
                         <div style="margin-bottom: 16px;">
                             <p style="margin: 0; color: #6d7175; font-size: 14px;">
                                 Set up your email configuration to start sending newsletters and festival offers.
                             </p>
-                            ${settings ? `<p style="margin: 4px 0 0 0; color: #e74c3c; font-size: 12px;">Debug: Settings found but validation failed</p>` : ''}
                         </div>
                     `}
 
@@ -1467,9 +1425,6 @@
                             </button>
                             <button type="button" class="btn-email secondary" onclick="showTestEmailModal()">
                                 📧 Send Test Email
-                            </button>
-                            <button type="button" class="btn-email secondary" onclick="loadEmailConfiguration()" style="font-size: 12px;">
-                                🔄 Refresh Status
                             </button>
                             ${isConfigured ? `
                                 <button type="button" class="btn-email danger" onclick="disableEmail()">

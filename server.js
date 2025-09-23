@@ -356,6 +356,28 @@ const {
 let transporter = null;
 
 /**
+ * Check if email is properly configured for a shop
+ * @param {string} shopDomain - The shop domain to check
+ * @returns {Promise<boolean>} - True if email is configured, false otherwise
+ */
+async function checkEmailConfigurationStatus(shopDomain) {
+  try {
+    // Check if Mailjet API keys are available (global configuration)
+    const hasMailjetKeys = !!(process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY);
+    
+    // Check if shop has email settings configured
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    const hasShopEmailSettings = !!(shopSettings && shopSettings.emailSettings && shopSettings.emailSettings.enabled);
+    
+    // Email is configured if we have either Mailjet keys OR shop-specific settings
+    return hasMailjetKeys || hasShopEmailSettings;
+  } catch (error) {
+    console.error('Error checking email configuration:', error);
+    return false;
+  }
+}
+
+/**
  * Create email transporter for a specific shop using their email settings
  * @param {string} shopDomain - The shop domain to get email settings for
  * @returns {Promise<Object|null>} - Nodemailer transporter or null if not configured
@@ -4246,7 +4268,7 @@ app.get('/api/newsletter/auto-status/:shopDomain', async (req, res) => {
         sent: newsletter.sentNewsletter,
         tags: newsletter.tags
       })),
-      emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD)
+      emailConfigured: await checkEmailConfigurationStatus(shopDomain)
     });
     
   } catch (error) {

@@ -5984,6 +5984,267 @@ app.post('/api/shop-settings/:shopDomain/festival-template', async (req, res) =>
   }
 });
 
+// AI Email Generation - Generate email content with Gemini
+app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) => {
+  try {
+    const { shopDomain } = req.params;
+    const { recipientEmails, emailPrompt } = req.body;
+    
+    console.log(`🤖 Generating AI email for shop: ${shopDomain}`);
+    
+    // Validate input
+    if (!recipientEmails || !emailPrompt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Recipient emails and email prompt are required'
+      });
+    }
+    
+    // Check if email is configured for this shop
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    if (!shopSettings || !shopSettings.emailSettings.enabled) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is not configured for this shop. Please configure email settings first.'
+      });
+    }
+    
+    // Parse recipient emails
+    const recipients = recipientEmails
+      .split(/[,\n]/)
+      .map(email => email.trim())
+      .filter(email => email && email.includes('@'));
+    
+    if (recipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid email addresses found'
+      });
+    }
+    
+    // Generate email content with Gemini
+    const prompt = `You are an expert email marketing specialist. Generate a professional and engaging email based on the following prompt:
+
+"${emailPrompt}"
+
+Requirements:
+1. Create a compelling subject line (max 60 characters)
+2. Write engaging HTML email content with proper formatting
+3. Include a clear call-to-action
+4. Make it professional yet friendly
+5. Ensure it's mobile-responsive
+6. Use appropriate emojis sparingly
+
+Store Information:
+- Store Name: ${shopSettings.emailSettings.fromName || 'Our Store'}
+- From Email: ${shopSettings.emailSettings.fromEmail}
+
+Response Format:
+{
+  "subject": "Your compelling subject line here",
+  "htmlContent": "Your complete HTML email content here with proper formatting, including <html>, <head>, and <body> tags"
+}
+
+Generate ONLY the JSON response, no additional text.`;
+
+    console.log('🤖 Generating email content with Gemini...');
+    
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+        'X-Title': 'AI Email Generator'
+      },
+      timeout: 30000
+    });
+
+    let aiResponse = response.data.choices[0].message.content.trim();
+    
+    // Clean up the response
+    aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    
+    let emailData;
+    try {
+      emailData = JSON.parse(aiResponse);
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      // Fallback to manual parsing
+      const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
+      const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}/);
+      
+      if (subjectMatch && contentMatch) {
+        emailData = {
+          subject: subjectMatch[1],
+          htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+        };
+      } else {
+        throw new Error('Failed to parse AI response');
+      }
+    }
+    
+    // Validate generated content
+    if (!emailData.subject || !emailData.htmlContent) {
+      throw new Error('AI generated incomplete email content');
+    }
+    
+    // Ensure HTML content is properly formatted
+    if (!emailData.htmlContent.includes('<html>')) {
+      emailData.htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${emailData.subject}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .content { padding: 20px 0; }
+        .footer { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; color: #666; }
+        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="content">
+        ${emailData.htmlContent}
+    </div>
+    <div class="footer">
+        <p>Best regards,<br>${shopSettings.emailSettings.fromName}</p>
+        <p><small>This email was sent from ${shopSettings.emailSettings.fromEmail}</small></p>
+    </div>
+</body>
+</html>`;
+    }
+    
+    const generatedEmailData = {
+      subject: emailData.subject,
+      htmlContent: emailData.htmlContent,
+      recipients: recipients,
+      fromEmail: shopSettings.emailSettings.fromEmail,
+      fromName: shopSettings.emailSettings.fromName
+    };
+    
+    console.log(`✅ AI email generated successfully for ${recipients.length} recipients`);
+    
+    res.json({
+      success: true,
+      emailData: generatedEmailData,
+      message: 'Email content generated successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to generate AI email:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate email content'
+    });
+  }
+});
+
+// AI Email Generation - Send generated email
+app.post('/api/shop-settings/:shopDomain/ai-email/send', async (req, res) => {
+  try {
+    const { shopDomain } = req.params;
+    const { subject, htmlContent, recipients, fromEmail, fromName } = req.body;
+    
+    console.log(`📧 Sending AI-generated email for shop: ${shopDomain} to ${recipients.length} recipients`);
+    
+    // Validate input
+    if (!subject || !htmlContent || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid email data provided'
+      });
+    }
+    
+    // Check if email is configured for this shop
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    if (!shopSettings || !shopSettings.emailSettings.enabled) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is not configured for this shop'
+      });
+    }
+    
+    // Create email transporter for this shop
+    const transporter = await createShopEmailTransporter(shopDomain);
+    if (!transporter) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create email transporter'
+      });
+    }
+    
+    let successful = 0;
+    let failed = 0;
+    const results = [];
+    
+    // Send emails to all recipients
+    for (const recipient of recipients) {
+      try {
+        const emailOptions = {
+          from: `${fromName} <${fromEmail}>`,
+          to: recipient,
+          subject: subject,
+          html: htmlContent,
+          text: htmlContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
+        };
+        
+        const result = await transporter.sendMail(emailOptions);
+        successful++;
+        results.push({
+          recipient: recipient,
+          status: 'sent',
+          messageId: result.messageId
+        });
+        
+        console.log(`✅ Email sent to: ${recipient}`);
+        
+      } catch (emailError) {
+        failed++;
+        results.push({
+          recipient: recipient,
+          status: 'failed',
+          error: emailError.message
+        });
+        
+        console.error(`❌ Failed to send email to ${recipient}:`, emailError.message);
+      }
+    }
+    
+    console.log(`📊 Email sending complete: ${successful} successful, ${failed} failed`);
+    
+    res.json({
+      success: true,
+      results: {
+        successful: successful,
+        failed: failed,
+        total: recipients.length,
+        details: `Sent ${successful} out of ${recipients.length} emails successfully`,
+        individualResults: results
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to send AI-generated emails:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send emails'
+    });
+  }
+});
+
 // ==================== END SHOP EMAIL SETTINGS API ROUTES ====================
 
 // ==================== LOCATION-BASED FESTIVAL SYSTEM ====================

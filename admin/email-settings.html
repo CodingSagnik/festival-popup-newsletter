@@ -402,6 +402,58 @@
             </div>
         </div>
 
+        <div class="card" id="ai-email-generator-card" style="display: none;">
+            <div class="card-header">
+                <h2>🤖 AI Email Generator</h2>
+                <p>Generate custom emails with AI and send to multiple recipients</p>
+            </div>
+            <div class="card-body">
+                <form id="ai-email-form">
+                    <div class="form-group">
+                        <label for="recipientEmails">Recipient Email Addresses *</label>
+                        <textarea id="recipientEmails" name="recipientEmails" rows="3" placeholder="Enter email addresses separated by commas or new lines&#10;example@email.com, another@email.com&#10;third@email.com" required></textarea>
+                        <div class="help-text">Enter multiple email addresses separated by commas or new lines</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailPrompt">Email Content Prompt *</label>
+                        <textarea id="emailPrompt" name="emailPrompt" rows="4" placeholder="Describe the type of email/newsletter you want to generate. For example:&#10;- Create a festive Diwali email promoting 50% off on all products&#10;- Generate a Black Friday sale announcement with urgency&#10;- Write a holiday greeting email with special offers" required></textarea>
+                        <div class="help-text">Describe what kind of email content you want AI to generate</div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" id="generate-email-btn" class="btn btn-primary">🤖 Generate Email Content</button>
+                        <button type="button" id="send-generated-email-btn" class="btn btn-success" disabled>📧 Send Generated Email</button>
+                        <button type="button" id="clear-ai-form-btn" class="btn btn-secondary">Clear Form</button>
+                    </div>
+                </form>
+
+                <div id="generated-email-preview" class="card" style="display: none; margin-top: 20px; border: 2px solid #28a745;">
+                    <div class="card-header" style="background: #d4edda; border-bottom: 1px solid #c3e6cb;">
+                        <h3 style="color: #155724; margin: 0;">✨ Generated Email Content</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label><strong>Subject:</strong></label>
+                            <div id="generated-subject" style="padding: 10px; background: #f8f9fa; border-radius: 4px; margin-bottom: 15px;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Email Content:</strong></label>
+                            <div id="generated-content" style="padding: 15px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef; min-height: 200px;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Recipients:</strong></label>
+                            <div id="generated-recipients" style="padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="email-sending-status" class="alert" style="display: none;">
+                    <div id="sending-progress"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="test-email-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <h3>Send Test Email</h3>
@@ -458,6 +510,11 @@
             
             // Disable email button
             document.getElementById('disable-email-btn').addEventListener('click', disableEmail);
+            
+            // AI Email Generator
+            document.getElementById('generate-email-btn').addEventListener('click', generateEmailContent);
+            document.getElementById('send-generated-email-btn').addEventListener('click', sendGeneratedEmail);
+            document.getElementById('clear-ai-form-btn').addEventListener('click', clearAIForm);
         }
         
 
@@ -505,15 +562,18 @@
         function updateEmailStatus(configured, emailSettings) {
             const statusElement = document.getElementById('email-status');
             const descriptionElement = document.getElementById('status-description');
+            const aiEmailCard = document.getElementById('ai-email-generator-card');
             
             if (configured) {
                 statusElement.className = 'status-indicator status-configured';
                 statusElement.innerHTML = '<div class="status-dot"></div>Email Configured';
                 descriptionElement.textContent = `Emails will be sent from: ${emailSettings.fromName} <${emailSettings.fromEmail}>`;
+                aiEmailCard.style.display = 'block';
             } else {
                 statusElement.className = 'status-indicator status-not-configured';
                 statusElement.innerHTML = '<div class="status-dot"></div>Email Not Configured';
                 descriptionElement.textContent = 'Set up your email configuration to start sending newsletters and festival offers to your customers.';
+                aiEmailCard.style.display = 'none';
             }
         }
         
@@ -702,6 +762,136 @@
         
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        // AI Email Generator Functions
+        let generatedEmailData = null;
+        
+        async function generateEmailContent() {
+            const recipientEmails = document.getElementById('recipientEmails').value.trim();
+            const emailPrompt = document.getElementById('emailPrompt').value.trim();
+            
+            if (!recipientEmails || !emailPrompt) {
+                showAlert('Please fill in both recipient emails and email prompt', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                document.getElementById('generate-email-btn').disabled = true;
+                document.getElementById('generate-email-btn').textContent = '🤖 Generating...';
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}/ai-email/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        recipientEmails: recipientEmails,
+                        emailPrompt: emailPrompt
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    generatedEmailData = data.emailData;
+                    displayGeneratedEmail(data.emailData);
+                    showAlert('Email content generated successfully!', 'success');
+                    document.getElementById('send-generated-email-btn').disabled = false;
+                } else {
+                    showAlert(data.error || 'Failed to generate email content', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Failed to generate email content:', error);
+                showAlert('Failed to generate email content', 'error');
+            } finally {
+                showLoading(false);
+                document.getElementById('generate-email-btn').disabled = false;
+                document.getElementById('generate-email-btn').textContent = '🤖 Generate Email Content';
+            }
+        }
+        
+        function displayGeneratedEmail(emailData) {
+            document.getElementById('generated-subject').textContent = emailData.subject;
+            document.getElementById('generated-content').innerHTML = emailData.htmlContent;
+            document.getElementById('generated-recipients').textContent = emailData.recipients.join(', ');
+            document.getElementById('generated-email-preview').style.display = 'block';
+        }
+        
+        async function sendGeneratedEmail() {
+            if (!generatedEmailData) {
+                showAlert('Please generate email content first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to send this email to ${generatedEmailData.recipients.length} recipient(s)?`)) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                document.getElementById('send-generated-email-btn').disabled = true;
+                document.getElementById('send-generated-email-btn').textContent = '📧 Sending...';
+                
+                const statusDiv = document.getElementById('email-sending-status');
+                const progressDiv = document.getElementById('sending-progress');
+                statusDiv.className = 'alert alert-info';
+                statusDiv.style.display = 'block';
+                progressDiv.innerHTML = '<div class="spinner"></div><p>Sending emails...</p>';
+                
+                const response = await fetch(`/api/shop-settings/${shopDomain}/ai-email/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(generatedEmailData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.className = 'alert alert-success';
+                    progressDiv.innerHTML = `
+                        <h4>✅ Emails Sent Successfully!</h4>
+                        <p><strong>Total Sent:</strong> ${data.results.successful}</p>
+                        ${data.results.failed > 0 ? `<p><strong>Failed:</strong> ${data.results.failed}</p>` : ''}
+                        <p><strong>Details:</strong> ${data.results.details}</p>
+                    `;
+                    showAlert(`Successfully sent ${data.results.successful} emails!`, 'success');
+                    
+                    // Clear form after successful send
+                    setTimeout(() => {
+                        clearAIForm();
+                    }, 3000);
+                } else {
+                    statusDiv.className = 'alert alert-error';
+                    progressDiv.innerHTML = `<h4>❌ Failed to Send Emails</h4><p>${data.error}</p>`;
+                    showAlert(data.error || 'Failed to send emails', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Failed to send emails:', error);
+                const statusDiv = document.getElementById('email-sending-status');
+                const progressDiv = document.getElementById('sending-progress');
+                statusDiv.className = 'alert alert-error';
+                statusDiv.style.display = 'block';
+                progressDiv.innerHTML = `<h4>❌ Error Sending Emails</h4><p>${error.message}</p>`;
+                showAlert('Failed to send emails', 'error');
+            } finally {
+                showLoading(false);
+                document.getElementById('send-generated-email-btn').disabled = false;
+                document.getElementById('send-generated-email-btn').textContent = '📧 Send Generated Email';
+            }
+        }
+        
+        function clearAIForm() {
+            document.getElementById('ai-email-form').reset();
+            document.getElementById('generated-email-preview').style.display = 'none';
+            document.getElementById('email-sending-status').style.display = 'none';
+            document.getElementById('send-generated-email-btn').disabled = true;
+            generatedEmailData = null;
         }
     </script>
 

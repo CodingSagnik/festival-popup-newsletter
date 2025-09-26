@@ -573,27 +573,28 @@ Date: ${dateStr}
 Festival name:`;
 
   try {
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+      contents: [
         {
-          role: 'user',
-          content: prompt
+          parts: [
+            {
+              text: prompt
+            }
+          ]
         }
       ],
-      max_tokens: 100,
-      temperature: 0.7
+      generationConfig: {
+        maxOutputTokens: 100,
+        temperature: 0.7
+      }
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'Festival Popup Generator'
+        'Content-Type': 'application/json'
       },
       timeout: 15000
     });
 
-    let festivalName = response.data.choices[0].message.content.trim();
+    let festivalName = response.data.candidates[0].content.parts[0].text.trim();
     
     console.log('🔍 Raw AI response:', JSON.stringify(festivalName));
     
@@ -2584,7 +2585,7 @@ app.post('/api/generate-festival-name', async (req, res) => {
        // Use database result for specific festivals - it's more accurate!
        festivalName = databaseFestival;
        console.log('✅ Using database festival (specific):', festivalName);
-     } else if (process.env.OPENROUTER_API_KEY) {
+     } else if (process.env.GOOGLE_AI_API_KEY) {
        console.log('🤖 Generic festival detected, attempting AI refinement...');
       // 3. For generic festivals, try AI refinement with database context
       try {
@@ -2597,22 +2598,28 @@ Examples of good refinements:
 
 Only respond with the refined festival name, nothing else.`;
 
-        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-          model: 'google/gemini-2.0-flash-exp:free',
-          messages: [{ role: 'user', content: promptWithContext }],
-          max_tokens: 50,
-          temperature: 0.7
+        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+          contents: [
+            {
+              parts: [
+                {
+                  text: promptWithContext
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 50,
+            temperature: 0.7
+          }
         }, {
           headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-            'X-Title': 'Festival Popup Generator'
+            'Content-Type': 'application/json'
           },
           timeout: 15000
         });
 
-        let refinedName = response.data.choices[0].message.content.trim();
+        let refinedName = response.data.candidates[0].content.parts[0].text.trim();
         refinedName = refinedName.replace(/["']/g, '').split('\n')[0];
         
                  console.log('🤖 Raw AI refinement response:', refinedName);
@@ -3522,26 +3529,27 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the blog newsletter content now:`;
 
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+      contents: [
         {
-          role: 'user',
-          content: prompt
+          parts: [
+            {
+              text: prompt
+            }
+          ]
         }
       ],
-      temperature: 0.8,
-      max_tokens: 600
+      generationConfig: {
+        maxOutputTokens: 600,
+        temperature: 0.8
+      }
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'Blog Newsletter Auto-Generator'
+        'Content-Type': 'application/json'
       }
     });
 
-    const aiResponse = response.data.choices[0].message.content.trim();
+    const aiResponse = response.data.candidates[0].content.parts[0].text.trim();
     console.log('🤖 Raw AI Response:', aiResponse);
 
     // Parse JSON response
@@ -3802,26 +3810,27 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the newsletter content now:`;
 
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+      contents: [
         {
-          role: 'user',
-          content: prompt
+          parts: [
+            {
+              text: prompt
+            }
+          ]
         }
       ],
-      temperature: 0.8,
-      max_tokens: 800
+      generationConfig: {
+        maxOutputTokens: 800,
+        temperature: 0.8
+      }
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'Festival Newsletter Auto-Generator'
+        'Content-Type': 'application/json'
       }
     });
 
-    const aiResponse = response.data.choices[0].message.content.trim();
+    const aiResponse = response.data.candidates[0].content.parts[0].text.trim();
     console.log('🤖 Raw AI Response:', aiResponse);
 
     // Parse JSON response
@@ -3965,27 +3974,28 @@ Generate ONE perfect title that would make people want to open this email immedi
 TITLE:`;
 
     try {
-      const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
+      const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+        contents: [
           {
-            role: 'user',
-            content: prompt
+            parts: [
+              {
+                text: prompt
+              }
+            ]
           }
         ],
-        max_tokens: 50,
-        temperature: 0.8
+        generationConfig: {
+          maxOutputTokens: 50,
+          temperature: 0.8
+        }
       }, {
         headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-          'X-Title': 'Festival Newsletter Title Generator'
+          'Content-Type': 'application/json'
         },
         timeout: 15000
       });
 
-      let dynamicTitle = response.data.choices[0].message.content.trim();
+      let dynamicTitle = response.data.candidates[0].content.parts[0].text.trim();
       
       console.log('🔍 Raw Gemini title response:', JSON.stringify(dynamicTitle));
       
@@ -6064,22 +6074,23 @@ Generate ONLY the JSON response, no additional text.`;
         try {
           console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
           
-          const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: 'google/gemini-2.0-flash-exp:free',
-            messages: [
+          const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+            contents: [
               {
-                role: 'user',
-                content: prompt
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
               }
             ],
-            max_tokens: 2000,
-            temperature: 0.7
+            generationConfig: {
+              maxOutputTokens: 2000,
+              temperature: 0.7
+            }
           }, {
             headers: {
-              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-              'X-Title': 'AI Email Generator'
+              'Content-Type': 'application/json'
             },
             timeout: 30000
           });
@@ -6114,7 +6125,7 @@ Generate ONLY the JSON response, no additional text.`;
     
     const response = await makeAPICallWithRetry();
 
-    let aiResponse = response.data.choices[0].message.content.trim();
+    let aiResponse = response.data.candidates[0].content.parts[0].text.trim();
     
     // Clean up the response
     aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');

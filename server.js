@@ -6059,26 +6059,26 @@ Generate ONLY the JSON response, no additional text.`;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
-    
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'AI Email Generator'
-      },
-      timeout: 30000
-    });
+          
+          const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: 'google/gemini-2.0-flash-exp:free',
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 2000,
+            temperature: 0.7
+          }, {
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+              'X-Title': 'AI Email Generator'
+            },
+            timeout: 30000
+          });
           
           console.log('✅ Successfully generated email content');
           return response;

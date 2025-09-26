@@ -573,7 +573,7 @@ Date: ${dateStr}
 Festival name:`;
 
   try {
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -2598,7 +2598,7 @@ Examples of good refinements:
 
 Only respond with the refined festival name, nothing else.`;
 
-        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
           contents: [
             {
               parts: [
@@ -3529,7 +3529,7 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the blog newsletter content now:`;
 
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -3810,7 +3810,7 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the newsletter content now:`;
 
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -3974,7 +3974,7 @@ Generate ONE perfect title that would make people want to open this email immedi
 TITLE:`;
 
     try {
-      const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+      const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
         contents: [
           {
             parts: [
@@ -5994,6 +5994,41 @@ app.post('/api/shop-settings/:shopDomain/festival-template', async (req, res) =>
   }
 });
 
+// Helper function to log model usage for transparency
+function logModelUsage(endpoint, model) {
+  console.log(`🔍 [${endpoint}] Using model: ${model}`);
+  console.log(`💰 Model pricing: ${model === 'gemini-2.5-flash' ? 'FREE tier (60 req/min)' : 'Check Google AI pricing'}`);
+}
+
+// Model Configuration Check Endpoint
+app.get('/api/model-config', (req, res) => {
+  const modelConfig = {
+    currentModel: 'gemini-2.5-flash',
+    modelType: 'Fast, cost-effective model',
+    pricing: 'FREE tier (60 requests/minute)',
+    endpoints: {
+      'AI Email Generation': 'gemini-2.5-flash',
+      'Festival Name Generation': 'gemini-2.5-flash', 
+      'Blog Newsletter Generation': 'gemini-2.5-flash',
+      'Festival Newsletter Generation': 'gemini-2.5-flash',
+      'Dynamic Title Generation': 'gemini-2.5-flash',
+      'Festival Name Refinement': 'gemini-2.5-flash'
+    },
+    apiProvider: 'Google AI Studio (Direct)',
+    rateLimits: {
+      free: '60 requests/minute',
+      paid: 'Higher limits available'
+    },
+    lastUpdated: new Date().toISOString()
+  };
+  
+  res.json({
+    success: true,
+    modelConfig,
+    message: 'All endpoints using gemini-2.5-flash (fast, free tier)'
+  });
+});
+
 // AI Email Generation - Generate email content with Gemini
 app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) => {
   // Declare variables outside try block for access in catch block
@@ -6005,6 +6040,7 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     emailPrompt = req.body.emailPrompt;
     
     console.log(`🤖 Generating AI email for shop: ${shopDomain}`);
+    logModelUsage('AI Email Generation', 'gemini-2.5-flash');
     
     // Validate input
     if (!recipientEmails || !emailPrompt) {
@@ -6074,7 +6110,7 @@ Generate ONLY the JSON response, no additional text.`;
         try {
           console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
           
-          const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+          const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
             contents: [
               {
                 parts: [

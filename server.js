@@ -6142,30 +6142,18 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
       });
     }
     
-    // Generate email content with Gemini
-    const prompt = `You are an expert email marketing specialist. Generate a professional and engaging email based on the following prompt:
+    // Generate email content with Gemini - optimized prompt
+    const prompt = `Create a professional email for: "${emailPrompt}"
 
-"${emailPrompt}"
+Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
 
-Requirements:
-1. Create a compelling subject line (max 60 characters)
-2. Write engaging HTML email content with proper formatting
-3. Include a clear call-to-action
-4. Make it professional yet friendly
-5. Ensure it's mobile-responsive
-6. Use appropriate emojis sparingly
-
-Store Information:
-- Store Name: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
-- From Email: ${(hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com'}
-
-Response Format:
+Return ONLY this JSON format:
 {
-  "subject": "Your compelling subject line here",
-  "htmlContent": "Your complete HTML email content here with proper formatting, including <html>, <head>, and <body> tags"
+  "subject": "Compelling subject (max 60 chars)",
+  "htmlContent": "Complete HTML email with DOCTYPE, head, styles, and body tags"
 }
 
-Generate ONLY the JSON response, no additional text.`;
+Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
 
     console.log('🤖 Generating email content with Gemini...');
     
@@ -6185,10 +6173,10 @@ Generate ONLY the JSON response, no additional text.`;
                 ]
               }
             ],
-            generationConfig: {
-              maxOutputTokens: 2000,
-              temperature: 0.7
-            }
+          generationConfig: {
+            maxOutputTokens: 4000,
+            temperature: 0.7
+          }
           }, {
             headers: {
               'Content-Type': 'application/json'
@@ -6226,8 +6214,13 @@ Generate ONLY the JSON response, no additional text.`;
     
     const response = await makeAPICallWithRetry();
 
-    // Debug: Log the full response structure to understand the format
-    console.log('🔍 Full API response structure:', JSON.stringify(response.data, null, 2));
+    // Debug: Log response metadata for monitoring
+    console.log('🔍 Response metadata:', {
+      candidatesCount: response.data.candidates?.length,
+      finishReason: response.data.candidates?.[0]?.finishReason,
+      modelVersion: response.data.modelVersion,
+      totalTokens: response.data.usageMetadata?.totalTokenCount
+    });
     
     // Safely extract AI response with proper error handling
     let aiResponse;
@@ -6253,17 +6246,87 @@ Generate ONLY the JSON response, no additional text.`;
       emailData = JSON.parse(aiResponse);
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      // Fallback to manual parsing
-      const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
-      const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}/);
+      console.error('AI Response length:', aiResponse.length);
+      console.error('AI Response preview:', aiResponse.substring(0, 500) + '...');
       
-      if (subjectMatch && contentMatch) {
-        emailData = {
-          subject: subjectMatch[1],
-          htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
-        };
-      } else {
-        throw new Error('Failed to parse AI response');
+      // Check if response was truncated due to token limit
+      if (aiResponse.includes('"finishReason": "MAX_TOKENS"') || aiResponse.length > 3000) {
+        console.log('🔄 Response appears to be truncated, trying to extract what we can...');
+      }
+      
+      // Fallback to manual parsing - more robust approach
+      try {
+        const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
+        
+        // Try to extract HTML content even if incomplete
+        let htmlContent = '';
+        const contentStartMatch = aiResponse.match(/"htmlContent":\s*"([^"]*)/);
+        
+        if (contentStartMatch) {
+          // Extract everything after htmlContent until we find a reasonable end
+          const contentStart = aiResponse.indexOf('"htmlContent"');
+          const contentSubstring = aiResponse.substring(contentStart);
+          
+          // Try to find a more complete HTML structure
+          const htmlMatch = contentSubstring.match(/"htmlContent":\s*"(.*?)(?:<!DOCTYPE|<html)/);
+          if (htmlMatch) {
+            htmlContent = htmlMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          } else {
+            // Use the basic match if available
+            htmlContent = contentStartMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          }
+        }
+        
+        if (subjectMatch && htmlContent) {
+          // Ensure we have a complete HTML structure
+          if (!htmlContent.includes('</html>')) {
+            htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${subjectMatch[1]}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .content { padding: 20px 0; }
+        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 style="margin: 0; color: #333;">🪔 ${subjectMatch[1]}</h1>
+    </div>
+    <div class="content">
+        <p>Celebrate this special festival with amazing offers and deals!</p>
+        <p>We're excited to bring you exclusive discounts and festive joy.</p>
+        <ul>
+            <li>🎉 Special festival discounts</li>
+            <li>✨ Limited time offers</li>
+            <li>🎁 Exclusive deals just for you</li>
+            <li>🪔 Celebrate in style</li>
+        </ul>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Shop Now</a>
+        </div>
+    </div>
+</body>
+</html>`;
+          }
+          
+          emailData = {
+            subject: subjectMatch[1],
+            htmlContent: htmlContent
+          };
+          
+          console.log('✅ Successfully recovered email data from truncated response');
+        } else {
+          throw new Error('Could not extract subject or content from truncated response');
+        }
+      } catch (fallbackError) {
+        console.error('Fallback parsing also failed:', fallbackError);
+        throw new Error('Failed to parse AI response even with fallback methods');
       }
     }
     

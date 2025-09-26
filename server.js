@@ -6225,15 +6225,32 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
     // Safely extract AI response with proper error handling
     let aiResponse;
     try {
-      if (response.data && response.data.candidates && response.data.candidates[0] && 
-          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
-          response.data.candidates[0].content.parts[0]) {
-        aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+      if (response.data && response.data.candidates && response.data.candidates[0]) {
+        const candidate = response.data.candidates[0];
+        
+        // Check if response was truncated due to MAX_TOKENS
+        if (candidate.finishReason === 'MAX_TOKENS' && !candidate.content.parts) {
+          console.log('🔄 Response was truncated due to MAX_TOKENS, generating fallback content...');
+          throw new Error('RESPONSE_TRUNCATED');
+        }
+        
+        // Normal response with content
+        if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
+          aiResponse = candidate.content.parts[0].text.trim();
+        } else {
+          throw new Error('Unexpected API response structure');
+        }
       } else {
-        throw new Error('Unexpected API response structure');
+        throw new Error('No candidates in response');
       }
     } catch (structureError) {
       console.error('❌ Error parsing Google AI Studio response structure:', structureError);
+      
+      // If response was truncated, throw specific error to trigger fallback
+      if (structureError.message === 'RESPONSE_TRUNCATED') {
+        throw structureError;
+      }
+      
       console.error('❌ Response data:', JSON.stringify(response.data, null, 2));
       throw new Error('Failed to parse Google AI Studio response');
     }
@@ -6383,9 +6400,10 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
   } catch (error) {
     console.error('❌ Failed to generate AI email:', error);
     
-    // Handle rate limit errors with fallback content
-    if (error.message === 'RATE_LIMIT_EXCEEDED') {
-      console.log('🔄 Generating high-quality fallback email content...');
+    // Handle rate limit errors and response truncation with fallback content
+    if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED') {
+      const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 'response size limits';
+      console.log(`🔄 Generating high-quality fallback email content due to ${reasonMessage}...`);
       
       // Create smart subject based on user's prompt
       let smartSubject = `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;

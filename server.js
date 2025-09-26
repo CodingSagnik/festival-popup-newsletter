@@ -6195,9 +6195,24 @@ Generate ONLY the JSON response, no additional text.`;
     if (error.message === 'RATE_LIMIT_EXCEEDED') {
       console.log('🔄 Generating high-quality fallback email content...');
       
+      // Create smart subject based on user's prompt
+      let smartSubject = `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      
+      // Analyze prompt for context
+      const promptLower = emailPrompt.toLowerCase();
+      if (promptLower.includes('diwali') || promptLower.includes('deepavali')) {
+        smartSubject = `🪔 Special Diwali Offer from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      } else if (promptLower.includes('festival') || promptLower.includes('celebration')) {
+        smartSubject = `🎉 Festival Special from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      } else if (promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('offer')) {
+        smartSubject = `💰 Exclusive Offer from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      } else if (promptLower.includes('new') || promptLower.includes('launch')) {
+        smartSubject = `✨ Something New from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      }
+      
       // Create professional fallback content based on the prompt
       const fallbackEmailData = {
-        subject: `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`,
+        subject: smartSubject,
         htmlContent: `
 <!DOCTYPE html>
 <html>
@@ -6216,30 +6231,54 @@ Generate ONLY the JSON response, no additional text.`;
 </head>
 <body>
     <div class="header">
-        <h1 style="margin: 0; color: #333;">Hello from ${shopSettings.emailSettings.fromName}!</h1>
+        <h1 style="margin: 0; color: #333;">Hello from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}!</h1>
     </div>
     
     <div class="content">
-        <p>Thank you for being a valued part of our community. We wanted to reach out with an important message:</p>
+        <p>Thank you for being a valued customer! We're excited to share something special with you.</p>
         
         <div class="highlight">
-            <p><strong>Your Request:</strong> "${emailPrompt}"</p>
+            <p><strong>About your request:</strong> "${emailPrompt}"</p>
         </div>
         
-        <p>We're working hard to bring you the best experience and wanted to keep you informed about exciting updates and opportunities.</p>
-        
-        <p>Here's what you can expect from us:</p>
+        ${promptLower.includes('diwali') || promptLower.includes('deepavali') ? `
+        <p>🪔 <strong>Diwali Special!</strong> This festival of lights brings us great joy, and we want to share that with you through exclusive offers and celebrations.</p>
         <ul>
-            <li>📧 Timely updates on new features and improvements</li>
-            <li>🎁 Exclusive offers and special promotions</li>
-            <li>💡 Helpful tips and insights</li>
-            <li>🛍️ Priority access to new products and services</li>
+            <li>🎆 Festive discounts on your favorite products</li>
+            <li>✨ Special Diwali collection items</li>
+            <li>🎁 Limited-time exclusive offers</li>
+            <li>🪔 Celebrate with us this season of lights</li>
         </ul>
+        ` : promptLower.includes('festival') || promptLower.includes('celebration') ? `
+        <p>🎉 <strong>Festival Celebration!</strong> It's time to celebrate, and we want you to be part of our special festivities.</p>
+        <ul>
+            <li>🎪 Festival exclusive products and deals</li>
+            <li>🎈 Special celebration offers</li>
+            <li>🎁 Limited-time festival discounts</li>
+            <li>✨ Join our festive community</li>
+        </ul>
+        ` : promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('offer') ? `
+        <p>💰 <strong>Exclusive Offers Just for You!</strong> We've prepared some amazing deals that you won't want to miss.</p>
+        <ul>
+            <li>🏷️ Special discounts on premium products</li>
+            <li>💸 Limited-time savings opportunities</li>
+            <li>🎯 Personalized offers based on your preferences</li>
+            <li>⚡ Flash sales and exclusive deals</li>
+        </ul>
+        ` : `
+        <p>✨ <strong>Something Special Awaits!</strong> We're always working to bring you the best experience and exciting new opportunities.</p>
+        <ul>
+            <li>📧 Exclusive updates and early access</li>
+            <li>🎁 Special offers and promotions</li>
+            <li>💡 Helpful tips and insights</li>
+            <li>🛍️ Priority access to new arrivals</li>
+        </ul>
+        `}
         
-        <p>We appreciate your patience and continued support. If you have any questions or need assistance, please don't hesitate to reach out to us.</p>
+        <p>This is just the beginning! Stay tuned for more exciting updates and don't miss out on these amazing opportunities.</p>
         
         <div style="text-align: center; margin: 30px 0;">
-            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Get in Touch</a>
+            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Explore Now</a>
         </div>
     </div>
     

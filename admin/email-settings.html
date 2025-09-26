@@ -834,7 +834,17 @@
         
         function displayGeneratedEmail(emailData) {
             document.getElementById('generated-subject').textContent = emailData.subject;
-            document.getElementById('generated-content').innerHTML = emailData.htmlContent;
+            
+            // Extract content from HTML document for preview (avoid layout conflicts)
+            let contentToDisplay = emailData.htmlContent;
+            if (emailData.htmlContent.includes('<body>')) {
+                const bodyMatch = emailData.htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                if (bodyMatch) {
+                    contentToDisplay = bodyMatch[1];
+                }
+            }
+            
+            document.getElementById('generated-content').innerHTML = contentToDisplay;
             document.getElementById('generated-recipients').textContent = emailData.recipients.join(', ');
             document.getElementById('generated-email-preview').style.display = 'block';
         }

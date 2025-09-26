@@ -594,7 +594,20 @@ Festival name:`;
       timeout: 15000
     });
 
-    let festivalName = response.data.candidates[0].content.parts[0].text.trim();
+    // Safely extract response with error handling
+    let festivalName;
+    try {
+      if (response.data && response.data.candidates && response.data.candidates[0] && 
+          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
+          response.data.candidates[0].content.parts[0]) {
+        festivalName = response.data.candidates[0].content.parts[0].text.trim();
+      } else {
+        throw new Error('Unexpected API response structure for festival name generation');
+      }
+    } catch (structureError) {
+      console.error('❌ Error parsing festival name response:', structureError);
+      throw new Error('Failed to parse Google AI Studio response');
+    }
     
     console.log('🔍 Raw AI response:', JSON.stringify(festivalName));
     
@@ -2619,7 +2632,20 @@ Only respond with the refined festival name, nothing else.`;
           timeout: 15000
         });
 
-        let refinedName = response.data.candidates[0].content.parts[0].text.trim();
+        // Safely extract response with error handling
+        let refinedName;
+        try {
+          if (response.data && response.data.candidates && response.data.candidates[0] && 
+              response.data.candidates[0].content && response.data.candidates[0].content.parts && 
+              response.data.candidates[0].content.parts[0]) {
+            refinedName = response.data.candidates[0].content.parts[0].text.trim();
+          } else {
+            throw new Error('Unexpected API response structure for festival name refinement');
+          }
+        } catch (structureError) {
+          console.error('❌ Error parsing festival refinement response:', structureError);
+          throw new Error('Failed to parse Google AI Studio response');
+        }
         refinedName = refinedName.replace(/["']/g, '').split('\n')[0];
         
                  console.log('🤖 Raw AI refinement response:', refinedName);
@@ -3549,7 +3575,20 @@ Generate the blog newsletter content now:`;
       }
     });
 
-    const aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+    // Safely extract response with error handling
+    let aiResponse;
+    try {
+      if (response.data && response.data.candidates && response.data.candidates[0] && 
+          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
+          response.data.candidates[0].content.parts[0]) {
+        aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+      } else {
+        throw new Error('Unexpected API response structure');
+      }
+    } catch (structureError) {
+      console.error('❌ Error parsing response structure:', structureError);
+      throw new Error('Failed to parse Google AI Studio response');
+    }
     console.log('🤖 Raw AI Response:', aiResponse);
 
     // Parse JSON response
@@ -3830,7 +3869,20 @@ Generate the newsletter content now:`;
       }
     });
 
-    const aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+    // Safely extract response with error handling
+    let aiResponse;
+    try {
+      if (response.data && response.data.candidates && response.data.candidates[0] && 
+          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
+          response.data.candidates[0].content.parts[0]) {
+        aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+      } else {
+        throw new Error('Unexpected API response structure');
+      }
+    } catch (structureError) {
+      console.error('❌ Error parsing response structure:', structureError);
+      throw new Error('Failed to parse Google AI Studio response');
+    }
     console.log('🤖 Raw AI Response:', aiResponse);
 
     // Parse JSON response
@@ -3995,7 +4047,20 @@ TITLE:`;
         timeout: 15000
       });
 
-      let dynamicTitle = response.data.candidates[0].content.parts[0].text.trim();
+      // Safely extract response with error handling
+      let dynamicTitle;
+      try {
+        if (response.data && response.data.candidates && response.data.candidates[0] && 
+            response.data.candidates[0].content && response.data.candidates[0].content.parts && 
+            response.data.candidates[0].content.parts[0]) {
+          dynamicTitle = response.data.candidates[0].content.parts[0].text.trim();
+        } else {
+          throw new Error('Unexpected API response structure for dynamic title');
+        }
+      } catch (structureError) {
+        console.error('❌ Error parsing dynamic title response:', structureError);
+        throw new Error('Failed to parse Google AI Studio response');
+      }
       
       console.log('🔍 Raw Gemini title response:', JSON.stringify(dynamicTitle));
       
@@ -6161,7 +6226,24 @@ Generate ONLY the JSON response, no additional text.`;
     
     const response = await makeAPICallWithRetry();
 
-    let aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+    // Debug: Log the full response structure to understand the format
+    console.log('🔍 Full API response structure:', JSON.stringify(response.data, null, 2));
+    
+    // Safely extract AI response with proper error handling
+    let aiResponse;
+    try {
+      if (response.data && response.data.candidates && response.data.candidates[0] && 
+          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
+          response.data.candidates[0].content.parts[0]) {
+        aiResponse = response.data.candidates[0].content.parts[0].text.trim();
+      } else {
+        throw new Error('Unexpected API response structure');
+      }
+    } catch (structureError) {
+      console.error('❌ Error parsing Google AI Studio response structure:', structureError);
+      console.error('❌ Response data:', JSON.stringify(response.data, null, 2));
+      throw new Error('Failed to parse Google AI Studio response');
+    }
     
     // Clean up the response
     aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');

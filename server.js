@@ -5986,9 +5986,13 @@ app.post('/api/shop-settings/:shopDomain/festival-template', async (req, res) =>
 
 // AI Email Generation - Generate email content with Gemini
 app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) => {
+  // Declare variables outside try block for access in catch block
+  let shopSettings, hasMailjetKeys, hasShopEmailSettings, recipients, emailPrompt;
+  
   try {
     const { shopDomain } = req.params;
-    const { recipientEmails, emailPrompt } = req.body;
+    const { recipientEmails } = req.body;
+    emailPrompt = req.body.emailPrompt;
     
     console.log(`🤖 Generating AI email for shop: ${shopDomain}`);
     
@@ -6001,9 +6005,9 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     }
     
     // Check if email is configured for this shop (check global Mailjet keys OR shop settings)
-    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
-    const hasMailjetKeys = !!(process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY);
-    const hasShopEmailSettings = !!(shopSettings && shopSettings.emailSettings && shopSettings.emailSettings.enabled);
+    shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    hasMailjetKeys = !!(process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY);
+    hasShopEmailSettings = !!(shopSettings && shopSettings.emailSettings && shopSettings.emailSettings.enabled);
     
     if (!hasMailjetKeys && !hasShopEmailSettings) {
       return res.status(400).json({
@@ -6015,7 +6019,7 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     console.log(`📧 Email config check - Mailjet keys: ${hasMailjetKeys}, Shop settings: ${hasShopEmailSettings}`);
     
     // Parse recipient emails
-    const recipients = recipientEmails
+    recipients = recipientEmails
       .split(/[,\n]/)
       .map(email => email.trim())
       .filter(email => email && email.includes('@'));
@@ -6193,7 +6197,7 @@ Generate ONLY the JSON response, no additional text.`;
       
       // Create professional fallback content based on the prompt
       const fallbackEmailData = {
-        subject: `Important Update from ${shopSettings.emailSettings.fromName}`,
+        subject: `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`,
         htmlContent: `
 <!DOCTYPE html>
 <html>

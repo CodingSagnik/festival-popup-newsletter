@@ -6000,14 +6000,19 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
       });
     }
     
-    // Check if email is configured for this shop
+    // Check if email is configured for this shop (check global Mailjet keys OR shop settings)
     const shopSettings = await ShopSettings.getShopSettings(shopDomain);
-    if (!shopSettings || !shopSettings.emailSettings.enabled) {
+    const hasMailjetKeys = !!(process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY);
+    const hasShopEmailSettings = !!(shopSettings && shopSettings.emailSettings && shopSettings.emailSettings.enabled);
+    
+    if (!hasMailjetKeys && !hasShopEmailSettings) {
       return res.status(400).json({
         success: false,
-        error: 'Email is not configured for this shop. Please configure email settings first.'
+        error: 'Email is not configured for this shop. Please configure email settings first or contact support.'
       });
     }
+    
+    console.log(`📧 Email config check - Mailjet keys: ${hasMailjetKeys}, Shop settings: ${hasShopEmailSettings}`);
     
     // Parse recipient emails
     const recipients = recipientEmails
@@ -6036,8 +6041,8 @@ Requirements:
 6. Use appropriate emojis sparingly
 
 Store Information:
-- Store Name: ${shopSettings.emailSettings.fromName || 'Our Store'}
-- From Email: ${shopSettings.emailSettings.fromEmail}
+- Store Name: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
+- From Email: ${(hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com'}
 
 Response Format:
 {
@@ -6054,26 +6059,26 @@ Generate ONLY the JSON response, no additional text.`;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
-          
-          const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: 'google/gemini-2.0-flash-exp:free',
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 2000,
-            temperature: 0.7
-          }, {
-            headers: {
-              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-              'X-Title': 'AI Email Generator'
-            },
-            timeout: 30000
-          });
+    
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+        'X-Title': 'AI Email Generator'
+      },
+      timeout: 30000
+    });
           
           console.log('✅ Successfully generated email content');
           return response;
@@ -6156,8 +6161,8 @@ Generate ONLY the JSON response, no additional text.`;
         ${emailData.htmlContent}
     </div>
     <div class="footer">
-        <p>Best regards,<br>${shopSettings.emailSettings.fromName}</p>
-        <p><small>This email was sent from ${shopSettings.emailSettings.fromEmail}</small></p>
+        <p>Best regards,<br>${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}</p>
+        <p><small>This email was sent from ${(hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com'}</small></p>
     </div>
 </body>
 </html>`;
@@ -6167,8 +6172,8 @@ Generate ONLY the JSON response, no additional text.`;
       subject: emailData.subject,
       htmlContent: emailData.htmlContent,
       recipients: recipients,
-      fromEmail: shopSettings.emailSettings.fromEmail,
-      fromName: shopSettings.emailSettings.fromName
+      fromEmail: (hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com',
+      fromName: (hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'
     };
     
     console.log(`✅ AI email generated successfully for ${recipients.length} recipients`);
@@ -6235,15 +6240,15 @@ Generate ONLY the JSON response, no additional text.`;
     </div>
     
     <div class="footer">
-        <p>Best regards,<br><strong>${shopSettings.emailSettings.fromName}</strong></p>
-        <p><small>This email was sent from ${shopSettings.emailSettings.fromEmail}</small></p>
+        <p>Best regards,<br><strong>${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}</strong></p>
+        <p><small>This email was sent from ${(hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com'}</small></p>
         <p><small>💡 This email was generated using our backup system to ensure reliable delivery.</small></p>
     </div>
 </body>
 </html>`,
         recipients: recipients,
-        fromEmail: shopSettings.emailSettings.fromEmail,
-        fromName: shopSettings.emailSettings.fromName,
+        fromEmail: (hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com',
+        fromName: (hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store',
         isBackup: true
       };
       

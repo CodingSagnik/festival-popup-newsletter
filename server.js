@@ -1698,96 +1698,77 @@ app.get('/admin', (req, res) => {
 });
 
 // ==================== NEWSLETTER ANALYTICS API ENDPOINT ====================
-// Initialize sample data for new deployments
-async function initializeSampleDataIfNeeded(shopDomain) {
+// Initialize empty data structure for new merchants
+async function initializeEmptyDataIfNeeded(shopDomain) {
   try {
-    // Check if any subscribers exist
-    const existingSubscribers = await NewsletterSubscriber.find({ shopDomain });
+    console.log(`🔧 Initializing clean data structure for new merchant: ${shopDomain}`);
     
-    if (existingSubscribers.length === 0) {
-      console.log(`🔧 No subscribers found for ${shopDomain}, creating sample data...`);
-      
-      // Create sample subscribers
-      const sampleSubscribers = [
-        {
-          email: 'festival-lover@example.com',
-          shopDomain: shopDomain,
-          subscribedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-          isActive: true,
-          subscriptionType: 'festival',
-          preferences: { festivals: true, offers: true, blogUpdates: false }
-        },
-        {
-          email: 'blog-reader@example.com',
-          shopDomain: shopDomain,
-          subscribedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-          isActive: true,
-          subscriptionType: 'blog',
-          preferences: { festivals: false, offers: false, blogUpdates: true }
-        },
-        {
-          email: 'all-updates@example.com',
-          shopDomain: shopDomain,
-          subscribedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-          isActive: true,
-          subscriptionType: 'festival',
-          preferences: { festivals: true, offers: true, blogUpdates: true }
-        }
-      ];
-      
-      // Save sample subscribers
-      for (const subData of sampleSubscribers) {
-        const subscriber = new NewsletterSubscriber(subData);
-        await subscriber.save();
-      }
-      
-      console.log(`✅ Created ${sampleSubscribers.length} sample subscribers for ${shopDomain}`);
-    }
-    
-    // Only create sample festival if NO popup settings exist at all (first time setup)
+    // Only create empty popup settings if NO popup settings exist at all (first time setup)
     const popupSettings = await PopupSettings.findOne({ shopDomain });
     if (!popupSettings) {
-      console.log(`🔧 No popup settings found for ${shopDomain}, creating initial sample festival...`);
-      
-      // Create a sample active festival ONLY for first-time setup
-      const today = new Date();
-      const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-      
-      const sampleFestival = {
-        name: 'Independence Day',
-        startDate: today,
-        endDate: endDate,
-        offer: '25% OFF',
-        discountCode: 'INDA25',
-        backgroundColor: '#cb1d11',
-        textColor: '#ffffff',
-        backgroundImageUrl: 'https://image.pollinations.ai/prompt/beautiful%20festive%20independence%20day%20celebration%20background%20with%20decorative%20elements%2C%20vibrant%20colors%2C%20celebration%2C%20festive%20atmosphere%2C%20high%20quality%2C%20professional%20photography%2C%20detailed?width=815&height=593&seed=648458&model=flux&enhance=true&nologo=true',
-        isInfinite: true,
-        createdAt: new Date(),
-        createdViaQuickSetup: true
-      };
+      console.log(`🔧 No popup settings found for ${shopDomain}, creating empty settings...`);
       
       await PopupSettings.findOneAndUpdate(
         { shopDomain },
         {
           shopDomain,
-          isActive: true,
-          festivals: [sampleFestival],
+          isActive: false, // Start with popups disabled
+          festivals: [], // Start with no festivals
           displaySettings: {
             showDelay: 3000,
-            displayFrequency: 'always', // Changed to always for testing
+            displayFrequency: 'once_per_session',
             position: 'center'
           }
         },
         { upsert: true, new: true }
       );
       
-      console.log(`✅ Created initial sample festival for ${shopDomain}`);
+      console.log(`✅ Created empty popup settings for ${shopDomain}`);
     } else {
-      console.log(`ℹ️ Popup settings already exist for ${shopDomain}, skipping sample festival creation`);
+      console.log(`ℹ️ Popup settings already exist for ${shopDomain}, skipping initialization`);
     }
+    
+    // Note: We don't create any sample subscribers - let merchants start with 0
+    console.log(`✅ New merchant ${shopDomain} will start with clean slate (all stats = 0)`);
+    
   } catch (error) {
-    console.error('❌ Error initializing sample data:', error);
+    console.error('❌ Error initializing empty data:', error);
+  }
+}
+
+// Utility function to clear all data for a shop (useful for testing clean installs)
+async function clearShopData(shopDomain) {
+  try {
+    console.log(`🧹 Clearing all data for shop: ${shopDomain}`);
+    
+    // Clear all subscribers
+    const db = new (require('./utils/shopifyMetafields')).ShopifyMetafieldsDB();
+    await db.updateMetafield(shopDomain, 'newsletter_subscribers', []);
+    
+    // Clear all blog posts
+    await db.updateMetafield(shopDomain, 'blog_posts', []);
+    
+    // Reset popup settings to empty
+    await PopupSettings.findOneAndUpdate(
+      { shopDomain },
+      {
+        shopDomain,
+        isActive: false,
+        festivals: [],
+        displaySettings: {
+          showDelay: 3000,
+          displayFrequency: 'once_per_session',
+          position: 'center'
+        }
+      },
+      { upsert: true, new: true }
+    );
+    
+    console.log(`✅ All data cleared for ${shopDomain} - fresh install state`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error clearing shop data:', error);
+    return false;
   }
 }
 
@@ -1812,8 +1793,8 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
     const { shopDomain } = req.params;
     console.log(`📊 Getting newsletter analytics for: ${shopDomain}`);
     
-    // Initialize sample data if no subscribers exist (for new deployments)
-    await initializeSampleDataIfNeeded(shopDomain);
+    // Initialize empty data structure for new merchants (NEW MERCHANTS START WITH 0 STATS)
+    await initializeEmptyDataIfNeeded(shopDomain);
     
     // Get all subscribers
     const allSubscribers = await NewsletterSubscriber.find({ shopDomain });
@@ -1870,15 +1851,15 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
     }
     
     const analytics = {
-      totalSubscribers: allSubscribers.length,
-      activeSubscribers: activeSubscribers.length,
-      festivalSubscribers: festivalSubscribers.length,
-      blogSubscribers: blogSubscribers.length,
-      blogPostsTotal: blogPosts.length,
-      blogPostsSent: sentNewsletters.length,
-      recentSubscribers: recentSubscribers.length,
-      activeFestivals: activeFestivals,
-      currentFestival: activeFestivals.length > 0 ? activeFestivals[0] : null,
+      totalSubscribers: allSubscribers?.length || 0,
+      activeSubscribers: activeSubscribers?.length || 0,
+      festivalSubscribers: festivalSubscribers?.length || 0,
+      blogSubscribers: blogSubscribers?.length || 0,
+      blogPostsTotal: blogPosts?.length || 0,
+      blogPostsSent: sentNewsletters?.length || 0,
+      recentSubscribers: recentSubscribers?.length || 0,
+      activeFestivals: activeFestivals || [],
+      currentFestival: activeFestivals?.length > 0 ? activeFestivals[0] : null,
       localTime: new Date().toISOString(),
       shopDomain: shopDomain
     };
@@ -4040,9 +4021,17 @@ TITLE:`;
   }
 });
 
-// Test endpoint to add sample subscribers
+// Test endpoint to add sample subscribers (DISABLED IN PRODUCTION)
 app.post('/api/newsletter/test-subscriber', async (req, res) => {
   try {
+    // Prevent accidental sample data creation in production
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ 
+        error: 'Test endpoints disabled in production',
+        message: 'This endpoint is only available in development mode'
+      });
+    }
+    
     const { email } = req.body;
     const subscriber = new NewsletterSubscriber({
       email: email || 'test@example.com',
@@ -4059,6 +4048,41 @@ app.post('/api/newsletter/test-subscriber', async (req, res) => {
     } else {
       res.status(500).json({ error: error.message });
     }
+  }
+});
+
+// Endpoint to clear all shop data (simulate fresh install)
+app.post('/api/shop/:shopDomain/clear-data', async (req, res) => {
+  try {
+    // Only allow in development or with special header
+    if (process.env.NODE_ENV === 'production' && !req.headers['x-clear-data-token']) {
+      return res.status(403).json({ 
+        error: 'Data clearing disabled in production',
+        message: 'This endpoint requires special authorization in production'
+      });
+    }
+    
+    const { shopDomain } = req.params;
+    const success = await clearShopData(shopDomain);
+    
+    if (success) {
+      res.json({ 
+        success: true, 
+        message: `All data cleared for ${shopDomain}. Shop now in fresh install state.`,
+        stats: {
+          totalSubscribers: 0,
+          festivalSubscribers: 0,
+          blogSubscribers: 0,
+          newslettersSent: 0,
+          recentSubscribers: 0
+        }
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to clear shop data' });
+    }
+  } catch (error) {
+    console.error('Error clearing shop data:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

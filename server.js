@@ -223,6 +223,16 @@ const ColorThief = require('colorthief');
 const app = express();
 const PORT = process.env.PORT || 10000; // Render uses port 10000
 
+// Helper function to get the correct base URL for internal API calls
+function getBaseURL() {
+  // In production (Render), use the deployed URL
+  if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+    return 'https://festival-popup-newsletter.onrender.com';
+  }
+  // In development, use localhost
+  return `http://localhost:${PORT}`;
+}
+
 // Middleware - Enhanced CORS for Shopify
 app.use(cors({
   origin: function (origin, callback) {
@@ -1528,7 +1538,7 @@ app.post('/api/app-embeds/sync/:shopDomain', async (req, res) => {
       
       // Generate festival using AI
       try {
-        const aiResponse = await axios.post(`http://localhost:${PORT}/api/create-smart-festival`, {
+        const aiResponse = await axios.post(`${getBaseURL()}/api/create-smart-festival`, {
           shopDomain,
           offer: embedsSettings.festival_offer,
           startDate: embedsSettings.festival_start_date,
@@ -2792,7 +2802,7 @@ app.post('/api/create-smart-festival', async (req, res) => {
     // 1. Generate festival name based on start date using AI
     let festivalName;
     try {
-      const nameResponse = await axios.post(`http://localhost:${PORT}/api/generate-festival-name`, {
+      const nameResponse = await axios.post(`${getBaseURL()}/api/generate-festival-name`, {
         startDate
       });
       if (nameResponse.data.success) {
@@ -2812,7 +2822,7 @@ app.post('/api/create-smart-festival', async (req, res) => {
     // 3. Analyze site colors
     let colors = { primary: '#007cba', header: '#1a73e8' };
     try {
-      const colorResponse = await axios.post(`http://localhost:${PORT}/api/analyze-site-colors`, {
+      const colorResponse = await axios.post(`${getBaseURL()}/api/analyze-site-colors`, {
         shopDomain
       });
       if (colorResponse.data.success) {
@@ -2828,7 +2838,7 @@ app.post('/api/create-smart-festival', async (req, res) => {
     let imageColors = null;
     
     try {
-      const imageResponse = await axios.post(`http://localhost:${PORT}/api/generate-image`, {
+      const imageResponse = await axios.post(`${getBaseURL()}/api/generate-image`, {
         prompt: imagePrompt
       });
       if (imageResponse.data.success) {
@@ -4504,7 +4514,7 @@ app.post('/api/app-embeds/sync/:shopDomain', async (req, res) => {
               console.log('📅 Using provided end date:', finalEndDate);
             }
             
-            const aiResponse = await axios.post(`http://localhost:${PORT}/api/create-smart-festival`, {
+            const aiResponse = await axios.post(`${getBaseURL()}/api/create-smart-festival`, {
               shopDomain,
               offer: embedsSettings.festival_offer,  // Use EXACT offer text
               startDate: embedsSettings.festival_current_start_date || embedsSettings.festival_start_date,
@@ -4899,7 +4909,7 @@ app.post('/api/app-embeds/generate-festival/:shopDomain', async (req, res) => {
     }
     
     // Use existing smart festival generation
-    const aiResponse = await axios.post(`http://localhost:${PORT}/api/create-smart-festival`, {
+    const aiResponse = await axios.post(`${getBaseURL()}/api/create-smart-festival`, {
       shopDomain,
       offer,
       startDate,

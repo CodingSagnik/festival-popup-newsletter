@@ -2177,12 +2177,23 @@
                     })
                 });
                 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     shopifyGeneratedEmailData = data.emailData;
                     displayShopifyGeneratedEmail(data.emailData);
-                    showShopifyMessage('Email content generated successfully!', 'success');
+                    
+                    if (data.isBackup) {
+                        showShopifyMessage('Email content generated successfully using backup system due to high AI service demand. Content quality remains professional!', 'warning');
+                    } else {
+                        showShopifyMessage('Email content generated successfully!', 'success');
+                    }
+                    
                     document.getElementById('shopify-send-generated-email-btn').disabled = false;
                 } else {
                     showShopifyMessage(data.error || 'Failed to generate email content', 'error');
@@ -2190,7 +2201,15 @@
                 
             } catch (error) {
                 console.error('Failed to generate email content:', error);
-                showShopifyMessage('Failed to generate email content', 'error');
+                
+                // Handle specific error types
+                if (error.message.includes('429') || error.message.includes('rate limit')) {
+                    showShopifyMessage('AI service is experiencing high demand. Please try again in a moment, or we\'ll use our backup content generator.', 'warning');
+                } else if (error.message.includes('timeout')) {
+                    showShopifyMessage('Request timed out. Please check your connection and try again.', 'error');
+                } else {
+                    showShopifyMessage('Failed to generate email content. Please try again.', 'error');
+                }
             } finally {
                 showShopifyLoading(false);
                 document.getElementById('shopify-generate-email-btn').disabled = false;

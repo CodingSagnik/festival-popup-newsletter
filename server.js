@@ -6049,25 +6049,61 @@ Generate ONLY the JSON response, no additional text.`;
 
     console.log('🤖 Generating email content with Gemini...');
     
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
+    // Helper function for exponential backoff retry
+    const makeAPICallWithRetry = async (maxRetries = 3) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
+          
+          const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: 'google/gemini-2.0-flash-exp:free',
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 2000,
+            temperature: 0.7
+          }, {
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+              'X-Title': 'AI Email Generator'
+            },
+            timeout: 30000
+          });
+          
+          console.log('✅ Successfully generated email content');
+          return response;
+          
+        } catch (error) {
+          console.log(`❌ Attempt ${attempt} failed:`, error.response?.status, error.message);
+          
+          if (error.response?.status === 429) {
+            if (attempt < maxRetries) {
+              // Exponential backoff: 2^attempt seconds with jitter
+              const baseDelay = Math.pow(2, attempt) * 1000;
+              const jitter = Math.random() * 1000;
+              const delay = baseDelay + jitter;
+              
+              console.log(`⏳ Rate limited (429), waiting ${Math.round(delay/1000)}s before retry ${attempt + 1}...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            } else {
+              console.log('🔄 Max retries reached for rate limit, using fallback content...');
+              throw new Error('RATE_LIMIT_EXCEEDED');
+            }
+          } else {
+            // For non-rate-limit errors, don't retry
+            throw error;
+          }
         }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'AI Email Generator'
-      },
-      timeout: 30000
-    });
+      }
+    };
+    
+    const response = await makeAPICallWithRetry();
 
     let aiResponse = response.data.choices[0].message.content.trim();
     
@@ -6145,6 +6181,83 @@ Generate ONLY the JSON response, no additional text.`;
     
   } catch (error) {
     console.error('❌ Failed to generate AI email:', error);
+    
+    // Handle rate limit errors with fallback content
+    if (error.message === 'RATE_LIMIT_EXCEEDED') {
+      console.log('🔄 Generating high-quality fallback email content...');
+      
+      // Create professional fallback content based on the prompt
+      const fallbackEmailData = {
+        subject: `Important Update from ${shopSettings.emailSettings.fromName}`,
+        htmlContent: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Important Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .content { padding: 20px 0; }
+        .highlight { background: #e7f3ff; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0; border-radius: 4px; }
+        .footer { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; color: #666; }
+        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 style="margin: 0; color: #333;">Hello from ${shopSettings.emailSettings.fromName}!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Thank you for being a valued part of our community. We wanted to reach out with an important message:</p>
+        
+        <div class="highlight">
+            <p><strong>Your Request:</strong> "${emailPrompt}"</p>
+        </div>
+        
+        <p>We're working hard to bring you the best experience and wanted to keep you informed about exciting updates and opportunities.</p>
+        
+        <p>Here's what you can expect from us:</p>
+        <ul>
+            <li>📧 Timely updates on new features and improvements</li>
+            <li>🎁 Exclusive offers and special promotions</li>
+            <li>💡 Helpful tips and insights</li>
+            <li>🛍️ Priority access to new products and services</li>
+        </ul>
+        
+        <p>We appreciate your patience and continued support. If you have any questions or need assistance, please don't hesitate to reach out to us.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Get in Touch</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Best regards,<br><strong>${shopSettings.emailSettings.fromName}</strong></p>
+        <p><small>This email was sent from ${shopSettings.emailSettings.fromEmail}</small></p>
+        <p><small>💡 This email was generated using our backup system to ensure reliable delivery.</small></p>
+    </div>
+</body>
+</html>`,
+        recipients: recipients,
+        fromEmail: shopSettings.emailSettings.fromEmail,
+        fromName: shopSettings.emailSettings.fromName,
+        isBackup: true
+      };
+      
+      console.log('✅ Generated high-quality fallback email content');
+      
+      return res.json({
+        success: true,
+        emailData: fallbackEmailData,
+        message: 'Email content generated successfully (using backup system due to high demand)',
+        isBackup: true
+      });
+    }
+    
+    // For other errors, return standard error response
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to generate email content'

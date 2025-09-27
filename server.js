@@ -6308,6 +6308,9 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
             // Remove any trailing incomplete JSON or quotes
             extractedContent = extractedContent.replace(/["}]*$/, '');
             
+            console.log('🔍 Extracted HTML content length:', extractedContent.length);
+            console.log('🔍 HTML content preview:', extractedContent.substring(0, 200) + '...');
+            
             htmlContent = extractedContent;
           }
         }
@@ -6315,14 +6318,63 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
         if (subjectMatch) {
           // If we have partial HTML content, try to complete it
           if (htmlContent && htmlContent.length > 50) {
-            // We have some HTML content, try to complete it
-            if (!htmlContent.includes('</html>')) {
-              // Close any unclosed tags and add proper ending
-              htmlContent += `
-                </div>
-              </body>
-            </html>`;
+            console.log('🔧 Completing partial HTML content...');
+            
+            // Ensure we have a proper HTML structure
+            if (!htmlContent.includes('<!DOCTYPE html>')) {
+              htmlContent = '<!DOCTYPE html>\n' + htmlContent;
             }
+            
+            // If missing opening html tag, add it
+            if (!htmlContent.includes('<html')) {
+              htmlContent = htmlContent.replace('<!DOCTYPE html>', '<!DOCTYPE html>\n<html lang="en">');
+            }
+            
+            // Close unclosed style tags
+            if (htmlContent.includes('<style>') && !htmlContent.includes('</style>')) {
+              htmlContent += '\n        </style>\n    </head>\n    <body>';
+            }
+            
+            // Close unclosed head tags
+            if (htmlContent.includes('<head>') && !htmlContent.includes('</head>')) {
+              htmlContent += '\n    </head>\n    <body>';
+            }
+            
+            // Add body content if missing
+            if (!htmlContent.includes('<body')) {
+              if (htmlContent.includes('</head>')) {
+                htmlContent = htmlContent.replace('</head>', '</head>\n    <body>');
+              } else {
+                htmlContent += '\n    <body>';
+              }
+            }
+            
+            // Add some basic content if body is empty
+            if (!htmlContent.includes('<div') && !htmlContent.includes('<p') && !htmlContent.includes('<h1')) {
+              htmlContent += `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+            <div style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px;">
+                <h1 style="margin: 0; font-size: 28px;">🪔 ${subjectMatch[1]}</h1>
+            </div>
+            <div style="padding: 30px 0;">
+                <p style="font-size: 18px; color: #333;">Celebrate this special festival with amazing offers!</p>
+                <p style="font-size: 16px; color: #666;">Don't miss out on our exclusive Diwali deals and festive collections.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="#" style="display: inline-block; background: #FF6B35; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Shop Now 🛍️</a>
+                </div>
+            </div>
+        </div>`;
+            }
+            
+            // Close unclosed tags and add proper ending
+            if (!htmlContent.includes('</body>')) {
+              htmlContent += '\n    </body>';
+            }
+            if (!htmlContent.includes('</html>')) {
+              htmlContent += '\n</html>';
+            }
+            
+            console.log('✅ HTML completion finished. Final length:', htmlContent.length);
           } else {
             // Generate a complete professional email from scratch
             htmlContent = `

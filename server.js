@@ -6168,16 +6168,16 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     }
     
     // Generate email content with Gemini - optimized prompt
-    const prompt = `Email for: "${emailPrompt}"
+    const prompt = `Create: "${emailPrompt}"
 Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
 
-JSON format:
+JSON:
 {
-  "subject": "Subject (max 45 chars)",
-  "htmlContent": "Basic HTML email with styles"
+  "subject": "Short subject",
+  "htmlContent": "Simple HTML email"
 }
 
-Professional, responsive, clear CTA.`;
+Basic responsive design.`;
 
     console.log('🤖 Generating email content with Gemini...');
     
@@ -6198,7 +6198,7 @@ Professional, responsive, clear CTA.`;
               }
             ],
             generationConfig: {
-              maxOutputTokens: 1500,
+              maxOutputTokens: 800,
               temperature: 0.7
             }
           }, {
@@ -6262,6 +6262,14 @@ Professional, responsive, clear CTA.`;
     try {
       if (response.data && response.data.candidates && response.data.candidates[0]) {
         const candidate = response.data.candidates[0];
+        
+        // Debug: Log the actual response structure
+        console.log('🔍 DEBUG Candidate structure:', JSON.stringify({
+          hasContent: !!candidate.content,
+          hasParts: !!(candidate.content && candidate.content.parts),
+          partsLength: candidate.content && candidate.content.parts ? candidate.content.parts.length : 0,
+          finishReason: candidate.finishReason
+        }, null, 2));
         
         // Normal response with content (even if truncated, try to parse what we have)
         if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
@@ -6631,14 +6639,29 @@ Professional, responsive, clear CTA.`;
       // Create smart subject based on user's prompt
       let smartSubject = `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
       
-      // Analyze prompt for context
+      // Extract specific details from the prompt
       const promptLower = emailPrompt.toLowerCase();
+      
+      // Extract discount percentage
+      const discountMatch = emailPrompt.match(/(\d+)%\s*off/i);
+      const discountPercent = discountMatch ? discountMatch[1] : null;
+      
+      // Extract product mentions
+      const productMatches = emailPrompt.match(/\b(pants?|shirt?s?|t-?shirts?|dress|shoes?|jacket?s?|bags?|accessories?|jeans?|hoodie?s?|skirt?s?|shorts?)\b/gi);
+      const mentionedProducts = productMatches ? [...new Set(productMatches.map(p => p.toLowerCase()))] : [];
+      
+      // Extract sale/offer keywords
+      const saleKeywords = [];
+      if (promptLower.includes('sale')) saleKeywords.push('sale');
+      if (promptLower.includes('offer')) saleKeywords.push('offer');
+      if (promptLower.includes('deal')) saleKeywords.push('deal');
+      if (promptLower.includes('discount')) saleKeywords.push('discount');
       if (promptLower.includes('diwali') || promptLower.includes('deepavali')) {
-        smartSubject = `🪔 Special Diwali Offer from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+        smartSubject = `🪔 ${discountPercent ? `${discountPercent}% Off` : 'Special Diwali Offer'} from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
       } else if (promptLower.includes('festival') || promptLower.includes('celebration')) {
-        smartSubject = `🎉 Festival Special from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
-      } else if (promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('offer')) {
-        smartSubject = `💰 Exclusive Offer from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+        smartSubject = `🎉 ${discountPercent ? `Festival ${discountPercent}% Off` : 'Festival Special'} from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      } else if (discountPercent || promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('offer')) {
+        smartSubject = `💰 ${discountPercent ? `${discountPercent}% Off` : 'Exclusive Offer'} from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
       } else if (promptLower.includes('new') || promptLower.includes('launch')) {
         smartSubject = `✨ Something New from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
       }
@@ -6670,6 +6693,14 @@ Professional, responsive, clear CTA.`;
     <div class="content">
         <p>Thank you for being a valued customer! We're excited to share something special with you.</p>
         
+        ${discountPercent || mentionedProducts.length > 0 ? `
+        <div class="highlight">
+            <h3 style="margin-top: 0; color: #007bff;">🎯 Special Offer Details:</h3>
+            ${discountPercent ? `<p><strong>💰 ${discountPercent}% OFF</strong> - Limited time offer!</p>` : ''}
+            ${mentionedProducts.length > 0 ? `<p><strong>📦 Featured Products:</strong> ${mentionedProducts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}</p>` : ''}
+            <p>Don't miss out on these incredible savings!</p>
+        </div>
+        ` : ''}
         
         ${promptLower.includes('diwali') || promptLower.includes('deepavali') ? `
         <p>🪔 <strong>Diwali Special!</strong> This festival of lights brings us great joy, and we want to share that with you through exclusive offers and celebrations.</p>

@@ -643,7 +643,9 @@ Festival name:`;
     
     console.log('🔍 Raw AI response:', JSON.stringify(festivalName));
     
-    // Clean up the response - remove quotes, extra text, etc.
+    // Clean up the response - remove quotes, extra text, model tokens, etc.
+    festivalName = festivalName.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, ''); // Remove Mistral tokens
+    festivalName = festivalName.replace(/^\[OUT\]\s*/g, '').replace(/\s*\[\/OUT\]$/g, ''); // Remove OUT tokens  
     festivalName = festivalName.replace(/["']/g, '');
     festivalName = festivalName.split('\n')[0]; // Take first line only
     festivalName = festivalName.replace(/^(Festival Name:|Answer:|Name:|Response:)/i, '').trim();
@@ -1846,6 +1848,9 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
       'Vary': 'Accept-Encoding'
     });
     
+    // Force refresh by clearing any potential caching
+    const forceRefresh = req.query.t || Date.now();
+    
     const { shopDomain } = req.params;
     console.log(`📊 Getting newsletter analytics for: ${shopDomain}`);
     
@@ -2655,6 +2660,9 @@ Only respond with the refined festival name, nothing else.`;
         const response = await makeAIRequest(promptWithContext, 50, 0.7);
 
         let refinedName = response.data.choices[0].message.content.trim();
+        // Clean up model tokens and formatting
+        refinedName = refinedName.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, ''); // Remove Mistral tokens
+        refinedName = refinedName.replace(/^\[OUT\]\s*/g, '').replace(/\s*\[\/OUT\]$/g, ''); // Remove OUT tokens
         refinedName = refinedName.replace(/["']/g, '').split('\n')[0];
         
                  console.log('🤖 Raw AI refinement response:', refinedName);

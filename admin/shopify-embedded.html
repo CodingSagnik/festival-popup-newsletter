@@ -1173,10 +1173,11 @@
                 // Load stats using the same endpoint as main admin dashboard
                 console.log('📊 Loading analytics data...');
                 try {
-                    const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}`);
+                    // Add cache busting to ensure fresh data
+                    const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}?t=${Date.now()}`);
                     if (analyticsData) {
                         document.getElementById('newsletters-sent').textContent = analyticsData.emailsSent || 0;
-                        console.log('✅ Analytics data loaded');
+                        console.log('✅ Analytics data loaded:', analyticsData.emailsSent);
                     }
                 } catch (analyticsError) {
                     console.warn('⚠️ Analytics data failed to load:', analyticsError);
@@ -2242,6 +2243,19 @@
                         <p style="margin: 0;"><strong>Details:</strong> ${data.results.details}</p>
                     `;
                     showShopifyMessage(`Successfully sent ${data.results.successful} emails!`, 'success');
+                    
+                    // Refresh analytics to show updated email count
+                    setTimeout(async () => {
+                        try {
+                            const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}?t=${Date.now()}`);
+                            if (analyticsData) {
+                                document.getElementById('newsletters-sent').textContent = analyticsData.emailsSent || 0;
+                                console.log('📊 Analytics refreshed after email send:', analyticsData.emailsSent);
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ Failed to refresh analytics:', error);
+                        }
+                    }, 1000);
                     
                     // Clear form after successful send
                     setTimeout(() => {

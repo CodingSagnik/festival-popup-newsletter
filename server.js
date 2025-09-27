@@ -1907,7 +1907,7 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
     }
     
     // Get AI email count from shop settings
-    const shopSettings = await getShopSettings(shopDomain);
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
     const aiEmailsSent = shopSettings?.analytics?.emailsSent || 0;
     
     // Calculate total emails sent (blog newsletters + AI emails)
@@ -6265,7 +6265,7 @@ app.post('/api/shop-settings/:shopDomain/ai-email/send', async (req, res) => {
     // Track AI-generated emails in shop settings for analytics
     if (successful > 0) {
       try {
-        const shopSettings = await getShopSettings(shopDomain);
+        const shopSettings = await ShopSettings.getShopSettings(shopDomain);
         if (!shopSettings.analytics) {
           shopSettings.analytics = {};
         }
@@ -6273,7 +6273,7 @@ app.post('/api/shop-settings/:shopDomain/ai-email/send', async (req, res) => {
           shopSettings.analytics.emailsSent = 0;
         }
         shopSettings.analytics.emailsSent += successful;
-        await setShopSettings(shopDomain, shopSettings);
+        await shopSettings.save();
         console.log(`📊 Updated email count: +${successful} emails (total: ${shopSettings.analytics.emailsSent})`);
       } catch (trackingError) {
         console.warn('⚠️ Failed to update email analytics:', trackingError.message);

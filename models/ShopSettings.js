@@ -60,6 +60,12 @@ const shopSettingsSchema = new mongoose.Schema({
             }
         }
     },
+    analytics: {
+        emailsSent: {
+            type: Number,
+            default: 0
+        }
+    },
     createdAt: {
         type: Date,
         default: Date.now

@@ -270,11 +270,15 @@ app.options('*', (req, res) => {
 
 // Helper function for AI requests with fallback models
 async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
-  // List of free models to try in order (best to fallback)
+  // Expanded list of free models to avoid rate limits
   const models = [
     'mistralai/mistral-7b-instruct:free',
     'meta-llama/llama-3.2-3b-instruct:free',
-    'google/gemini-2.0-flash-exp:free'
+    'google/gemini-2.0-flash-exp:free',
+    'microsoft/phi-3.5-mini-instruct:free',
+    'qwen/qwen-2-7b-instruct:free',
+    'huggingfaceh4/zephyr-7b-beta:free',
+    'openchat/openchat-7b:free'
   ];
 
   let response = null;
@@ -303,7 +307,7 @@ async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
             'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
             'X-Title': 'AI Email Generator'
           },
-          timeout: 15000
+          timeout: 20000
         });
 
         console.log(`✅ Successfully generated with ${model}`);
@@ -313,17 +317,29 @@ async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
         const errorType = error.code === 'ECONNABORTED' ? 'TIMEOUT' : error.response?.status || 'UNKNOWN';
         console.log(`❌ ${model} attempt ${attempt} failed:`, errorType, error.response?.statusText || error.message);
         
-        // If rate limited (429), wait before retry
-        if (error.response?.status === 429 && attempt === 1) {
-          console.log('⏳ Rate limited, waiting 2 seconds before retry...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        // If rate limited (429), use exponential backoff
+        if (error.response?.status === 429) {
+          const backoffTime = attempt === 1 ? 5000 : 15000; // 5s then 15s
+          console.log(`⏳ Rate limited, waiting ${backoffTime/1000}s before ${attempt === 1 ? 'retry' : 'next model'}...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          if (attempt === 2) break; // Move to next model after 2nd failure
         }
         // If timeout or connection error, skip to next model faster
         else if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
           console.log('⏭️ Connection/timeout error, skipping to next model...');
           break; // Skip to next model
         }
+        // For other errors, short wait before retry
+        else if (attempt === 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
+    }
+    
+    // Add delay between models to avoid rapid-fire requests
+    if (models.indexOf(model) < models.length - 1) {
+      console.log('⏸️ Brief pause before trying next model...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
   
@@ -6190,6 +6206,79 @@ Generate the JSON response now:`;
     
   } catch (error) {
     console.error('❌ Failed to generate AI email:', error);
+    
+    // Check if all models are rate limited - provide fallback content
+    if (error.response?.status === 429 || error.message.includes('All AI models are currently unavailable')) {
+      console.log('🔄 All AI models rate-limited, providing high-quality fallback content...');
+      
+      // Extract key info from prompt for fallback
+      const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+      const storeName = shopSettings?.emailSettings?.fromName || 'Our Store';
+      
+      // Create intelligent fallback based on prompt keywords
+      let subject = "🎉 Special Offer Just for You!";
+      let content = `
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Special Offer</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+            <h1 style="margin: 0 0 20px 0; font-size: 24px;">🎉 Special Offer from ${storeName}!</h1>
+            <p style="font-size: 18px; margin: 0;">Dear Customer,</p>
+          </div>
+          
+          <div style="padding: 30px 20px;">
+            <p style="font-size: 16px;">We're excited to share something special with you!</p>
+            
+            <p style="font-size: 16px;">Don't miss out on this limited-time opportunity to discover amazing products and unbeatable deals at ${storeName}.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                <strong>✨ This exclusive offer won't last long!</strong><br>
+                Visit our store today and explore our latest collection.
+              </p>
+            </div>
+            
+            <p style="font-size: 16px;">Thank you for being a valued customer. We appreciate your continued support!</p>
+            
+            <p style="font-size: 16px;">Happy shopping! 🛍️</p>
+            
+            <p style="font-size: 14px; color: #666; margin-top: 40px;">
+              Best regards,<br>
+              The ${storeName} Team
+            </p>
+          </div>
+        </body>
+        </html>`;
+      
+      // Check prompt for specific keywords and customize
+      const promptLower = emailPrompt.toLowerCase();
+      if (promptLower.includes('diwali') || promptLower.includes('festival')) {
+        subject = "🪔 Festive Diwali Wishes & Special Offers!";
+        content = content.replace('Special Offer from', 'Diwali Wishes from').replace('something special', 'festive Diwali offers');
+      } else if (promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('%')) {
+        subject = "💰 Limited Time Discount - Don't Miss Out!";
+        content = content.replace('something special', 'exclusive discounts and savings');
+      } else if (promptLower.includes('new') || promptLower.includes('launch')) {
+        subject = "🚀 Exciting New Arrivals Just for You!";
+        content = content.replace('something special', 'our exciting new arrivals');
+      }
+      
+      return res.json({
+        success: true,
+        emailData: {
+          subject: subject,
+          htmlContent: content,
+          recipients: recipientEmails
+        },
+        fallback: true,
+        message: 'AI service temporarily busy - high-quality fallback content provided'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to generate email content'

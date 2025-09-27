@@ -6021,9 +6021,9 @@ Response Format - IMPORTANT:
 }
 
 CRITICAL INSTRUCTIONS:
-- Use DOUBLE QUOTES (") only, never backticks (`) or template literals
-- Escape any quotes inside strings with \"
-- Use \\n for line breaks in the HTML content
+- Use DOUBLE QUOTES only, never backticks or template literals  
+- Escape any quotes inside strings with backslash-quote
+- Use backslash-n for line breaks in the HTML content
 - Generate ONLY valid JSON, no additional text or markdown
 - Do NOT use JavaScript template literal syntax
 

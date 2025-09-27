@@ -236,6 +236,9 @@ async function callHuggingFaceAPI(prompt, options = {}) {
     const model = models[i];
     try {
       console.log(`🤖 Trying Hugging Face model: ${model} (${i + 1}/${models.length})`);
+      console.log(`🔗 API URL: https://api-inference.huggingface.co/models/${model}`);
+      console.log(`🔑 API Key present: ${!!process.env.HUGGINGFACE_API_KEY}`);
+      console.log(`🔑 API Key length: ${process.env.HUGGINGFACE_API_KEY ? process.env.HUGGINGFACE_API_KEY.length : 0}`);
       
       const response = await axios.post(
         `https://api-inference.huggingface.co/models/${model}`,
@@ -6630,8 +6633,8 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
   } catch (error) {
     console.error('❌ Failed to generate AI email:', error);
     
-    // Handle rate limit errors, response truncation, and timeouts with fallback content
-    if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED' || error.message === 'REQUEST_TIMEOUT') {
+    // Handle all AI failures with Smart Email Generation System
+    if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED' || error.message === 'REQUEST_TIMEOUT' || error.message.includes('All Hugging Face models failed')) {
       const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 
                          error.message === 'RESPONSE_TRUNCATED' ? 'response size limits' : 'connection timeouts';
       console.log(`🎯 Using Smart Email Generation System (Hugging Face backup unavailable due to ${reasonMessage})...`);
@@ -6646,9 +6649,17 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
       const discountMatch = emailPrompt.match(/(\d+)%\s*off/i);
       const discountPercent = discountMatch ? discountMatch[1] : null;
       
-      // Extract product mentions
-      const productMatches = emailPrompt.match(/\b(pants?|shirt?s?|t-?shirts?|dress|shoes?|jacket?s?|bags?|accessories?|jeans?|hoodie?s?|skirt?s?|shorts?)\b/gi);
+      // Extract product mentions (expanded list)
+      const productMatches = emailPrompt.match(/\b(pants?|shirt?s?|t-?shirts?|dress|dresses|shoes?|jacket?s?|bags?|accessories?|jeans?|hoodie?s?|skirt?s?|shorts?|cloths?|clothing|apparel|fashion|wear|garments?|tops?|bottoms?|outfits?|suits?|coats?|sweaters?|blouses?|scarves?)\b/gi);
       const mentionedProducts = productMatches ? [...new Set(productMatches.map(p => p.toLowerCase()))] : [];
+      
+      // Extract occasion/event mentions
+      const occasionMatches = emailPrompt.match(/\b(black friday|cyber monday|christmas|diwali|deepavali|new year|thanksgiving|valentine|easter|mother's day|father's day|halloween|sale|clearance|end of season|summer|winter|spring|fall|autumn|holiday|festival|celebration|wedding|party)\b/gi);
+      const mentionedOccasions = occasionMatches ? [...new Set(occasionMatches.map(o => o.toLowerCase()))] : [];
+      
+      // Extract action words
+      const actionMatches = emailPrompt.match(/\b(buy|shop|purchase|get|grab|save|discount|offer|deal|promotion|announcing|launch|introducing|new|limited|exclusive|special)\b/gi);
+      const mentionedActions = actionMatches ? [...new Set(actionMatches.map(a => a.toLowerCase()))] : [];
       
       // Extract sale/offer keywords
       const saleKeywords = [];
@@ -6656,14 +6667,24 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
       if (promptLower.includes('offer')) saleKeywords.push('offer');
       if (promptLower.includes('deal')) saleKeywords.push('deal');
       if (promptLower.includes('discount')) saleKeywords.push('discount');
-      if (promptLower.includes('diwali') || promptLower.includes('deepavali')) {
-        smartSubject = `🪔 ${discountPercent ? `${discountPercent}% Off` : 'Special Diwali Offer'} from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
-      } else if (promptLower.includes('festival') || promptLower.includes('celebration')) {
-        smartSubject = `🎉 ${discountPercent ? `Festival ${discountPercent}% Off` : 'Festival Special'} from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
-      } else if (discountPercent || promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('offer')) {
-        smartSubject = `💰 ${discountPercent ? `${discountPercent}% Off` : 'Exclusive Offer'} from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
-      } else if (promptLower.includes('new') || promptLower.includes('launch')) {
-        smartSubject = `✨ Something New from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
+      // Generate smarter subject based on extracted information
+      const storeName = (hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store';
+      
+      if (mentionedOccasions.includes('black friday')) {
+        smartSubject = `🛍️ ${discountPercent ? `${discountPercent}% Off` : 'Black Friday Sale'} - ${storeName}`;
+      } else if (mentionedOccasions.includes('diwali') || mentionedOccasions.includes('deepavali')) {
+        smartSubject = `🪔 ${discountPercent ? `Diwali ${discountPercent}% Off` : 'Diwali Special'} - ${storeName}`;
+      } else if (mentionedOccasions.some(o => ['christmas', 'holiday'].includes(o))) {
+        smartSubject = `🎄 ${discountPercent ? `Holiday ${discountPercent}% Off` : 'Holiday Special'} - ${storeName}`;
+      } else if (mentionedOccasions.length > 0) {
+        const occasion = mentionedOccasions[0].charAt(0).toUpperCase() + mentionedOccasions[0].slice(1);
+        smartSubject = `🎉 ${discountPercent ? `${occasion} ${discountPercent}% Off` : `${occasion} Special`} - ${storeName}`;
+      } else if (discountPercent) {
+        smartSubject = `💰 ${discountPercent}% Off ${mentionedProducts.length > 0 ? mentionedProducts[0].charAt(0).toUpperCase() + mentionedProducts[0].slice(1) : 'Everything'} - ${storeName}`;
+      } else if (mentionedActions.includes('new') || mentionedActions.includes('launch')) {
+        smartSubject = `✨ New Arrivals at ${storeName}`;
+      } else {
+        smartSubject = `💝 Special Offer from ${storeName}`;
       }
       
       // Create professional fallback content based on the prompt
@@ -6693,12 +6714,14 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
     <div class="content">
         <p>Thank you for being a valued customer! We're excited to share something special with you.</p>
         
-        ${discountPercent || mentionedProducts.length > 0 ? `
+        ${discountPercent || mentionedProducts.length > 0 || mentionedOccasions.length > 0 ? `
         <div class="highlight">
-            <h3 style="margin-top: 0; color: #007bff;">🎯 Special Offer Details:</h3>
+            <h3 style="margin-top: 0; color: #007bff;">🎯 ${mentionedOccasions.length > 0 ? mentionedOccasions[0].charAt(0).toUpperCase() + mentionedOccasions[0].slice(1) + ' ' : ''}Special Offer Details:</h3>
             ${discountPercent ? `<p><strong>💰 ${discountPercent}% OFF</strong> - Limited time offer!</p>` : ''}
             ${mentionedProducts.length > 0 ? `<p><strong>📦 Featured Products:</strong> ${mentionedProducts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}</p>` : ''}
-            <p>Don't miss out on these incredible savings!</p>
+            ${mentionedOccasions.length > 0 ? `<p><strong>🎉 Special Occasion:</strong> ${mentionedOccasions.map(o => o.charAt(0).toUpperCase() + o.slice(1)).join(', ')}</p>` : ''}
+            ${mentionedActions.length > 0 ? `<p><strong>⚡ Action:</strong> ${mentionedActions.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')} now!</p>` : ''}
+            <p>Don't miss out on these incredible ${discountPercent ? 'savings' : 'offers'}!</p>
         </div>
         ` : ''}
         

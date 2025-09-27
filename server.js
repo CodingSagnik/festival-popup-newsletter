@@ -220,95 +220,6 @@ const path = require('path');
 const sharp = require('sharp');
 const ColorThief = require('colorthief');
 
-// Hugging Face API helper with multiple model fallbacks
-async function callHuggingFaceAPI(prompt, options = {}) {
-  const models = [
-    'openai-community/gpt2',
-    'distilbert/distilgpt2',
-    'EleutherAI/gpt-j-6b',
-    'bigscience/bloom-1b7'
-  ];
-  
-  const maxLength = options.maxLength || 500;
-  const temperature = options.temperature || 0.7;
-  
-  for (let i = 0; i < models.length; i++) {
-    const model = models[i];
-    try {
-      console.log(`🤖 Trying Hugging Face model: ${model} (${i + 1}/${models.length})`);
-      console.log(`🔗 API URL: https://api-inference.huggingface.co/models/${model}`);
-      console.log(`🔑 API Key present: ${!!process.env.HUGGINGFACE_API_KEY}`);
-      console.log(`🔑 API Key length: ${process.env.HUGGINGFACE_API_KEY ? process.env.HUGGINGFACE_API_KEY.length : 0}`);
-      
-      const response = await axios.post(
-        `https://api-inference.huggingface.co/models/${model}`,
-        {
-          inputs: prompt,
-          parameters: {
-            max_length: maxLength,
-            temperature: temperature,
-            do_sample: true,
-            return_full_text: false
-          }
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        }
-      );
-      
-      console.log(`🔍 Response status: ${response.status}`);
-      console.log(`🔍 Response data:`, JSON.stringify(response.data, null, 2));
-      
-      if (response.data && response.data[0] && response.data[0].generated_text) {
-        const text = response.data[0].generated_text.trim();
-        console.log(`✅ Success with model: ${model}`);
-        return text;
-      }
-      
-      throw new Error('No generated text in response');
-      
-    } catch (error) {
-      console.log(`⚠️ Model ${model} failed:`, error.message);
-      
-      if (i === models.length - 1) {
-        throw new Error(`All Hugging Face models failed. Last error: ${error.message}`);
-      }
-      
-      // Wait a bit before trying next model
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-}
-
-// Helper function to clean generic footers from AI-generated content
-function cleanGenericFooters(htmlContent) {
-  // Remove copyright footers with generic company info
-  htmlContent = htmlContent.replace(/<!--[\s\S]*?Footer[\s\S]*?-->/gi, '');
-  
-  // Remove generic copyright sections
-  htmlContent = htmlContent.replace(/<div[^>]*style[^>]*background[^>]*#[0-9a-fA-F]{3,6}[^>]*>[\s\S]*?©[\s\S]*?All rights reserved[\s\S]*?<\/div>/gi, '');
-  
-  // Remove footer sections with generic addresses
-  htmlContent = htmlContent.replace(/<div[^>]*>[\s\S]*?123 Festival Lane[\s\S]*?<\/div>/gi, '');
-  htmlContent = htmlContent.replace(/<footer[^>]*>[\s\S]*?©[\s\S]*?<\/footer>/gi, '');
-  
-  // Remove unsubscribe/privacy policy sections that are generic
-  htmlContent = htmlContent.replace(/<div[^>]*>[\s\S]*?Unsubscribe[\s\S]*?Privacy Policy[\s\S]*?<\/div>/gi, '');
-  
-  // Remove social media sections with generic links
-  htmlContent = htmlContent.replace(/<div[^>]*>[\s\S]*?Follow us:[\s\S]*?Facebook[\s\S]*?Instagram[\s\S]*?Twitter[\s\S]*?<\/div>/gi, '');
-  
-  // Clean up any resulting empty divs or extra whitespace
-  htmlContent = htmlContent.replace(/<div[^>]*>\s*<\/div>/gi, '');
-  htmlContent = htmlContent.replace(/\n\s*\n\s*\n/g, '\n\n');
-  
-  return htmlContent;
-}
-
 const app = express();
 const PORT = process.env.PORT || 10000; // Render uses port 10000
 
@@ -662,41 +573,27 @@ Date: ${dateStr}
 Festival name:`;
 
   try {
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
-      contents: [
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
         {
-          parts: [
-            {
-              text: prompt
-            }
-          ]
+          role: 'user',
+          content: prompt
         }
       ],
-      generationConfig: {
-        maxOutputTokens: 100,
+      max_tokens: 100,
       temperature: 0.7
-      }
     }, {
       headers: {
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+        'X-Title': 'Festival Popup Generator'
       },
       timeout: 15000
     });
 
-    // Safely extract response with error handling
-    let festivalName;
-    try {
-      if (response.data && response.data.candidates && response.data.candidates[0] && 
-          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
-          response.data.candidates[0].content.parts[0]) {
-        festivalName = response.data.candidates[0].content.parts[0].text.trim();
-      } else {
-        throw new Error('Unexpected API response structure for festival name generation');
-      }
-    } catch (structureError) {
-      console.error('❌ Error parsing festival name response:', structureError);
-      throw new Error('Failed to parse Google AI Studio response');
-    }
+    let festivalName = response.data.choices[0].message.content.trim();
     
     console.log('🔍 Raw AI response:', JSON.stringify(festivalName));
     
@@ -2687,7 +2584,7 @@ app.post('/api/generate-festival-name', async (req, res) => {
        // Use database result for specific festivals - it's more accurate!
        festivalName = databaseFestival;
        console.log('✅ Using database festival (specific):', festivalName);
-     } else if (process.env.HUGGINGFACE_API_KEY) {
+     } else if (process.env.OPENROUTER_API_KEY) {
        console.log('🤖 Generic festival detected, attempting AI refinement...');
       // 3. For generic festivals, try AI refinement with database context
       try {
@@ -2700,41 +2597,22 @@ Examples of good refinements:
 
 Only respond with the refined festival name, nothing else.`;
 
-        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
-          contents: [
-            {
-              parts: [
-                {
-                  text: promptWithContext
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            maxOutputTokens: 50,
+        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: 'google/gemini-2.0-flash-exp:free',
+          messages: [{ role: 'user', content: promptWithContext }],
+          max_tokens: 50,
           temperature: 0.7
-          }
         }, {
           headers: {
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+            'X-Title': 'Festival Popup Generator'
           },
           timeout: 15000
         });
 
-        // Safely extract response with error handling
-        let refinedName;
-        try {
-          if (response.data && response.data.candidates && response.data.candidates[0] && 
-              response.data.candidates[0].content && response.data.candidates[0].content.parts && 
-              response.data.candidates[0].content.parts[0]) {
-            refinedName = response.data.candidates[0].content.parts[0].text.trim();
-          } else {
-            throw new Error('Unexpected API response structure for festival name refinement');
-          }
-        } catch (structureError) {
-          console.error('❌ Error parsing festival refinement response:', structureError);
-          throw new Error('Failed to parse Google AI Studio response');
-        }
+        let refinedName = response.data.choices[0].message.content.trim();
         refinedName = refinedName.replace(/["']/g, '').split('\n')[0];
         
                  console.log('🤖 Raw AI refinement response:', refinedName);
@@ -3644,40 +3522,26 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the blog newsletter content now:`;
 
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
-      contents: [
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
         {
-          parts: [
-            {
-              text: prompt
-            }
-          ]
+          role: 'user',
+          content: prompt
         }
       ],
-      generationConfig: {
-        maxOutputTokens: 600,
-        temperature: 0.8
-      }
+      temperature: 0.8,
+      max_tokens: 600
     }, {
       headers: {
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+        'X-Title': 'Blog Newsletter Auto-Generator'
       }
     });
 
-    // Safely extract response with error handling
-    let aiResponse;
-    try {
-      if (response.data && response.data.candidates && response.data.candidates[0] && 
-          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
-          response.data.candidates[0].content.parts[0]) {
-        aiResponse = response.data.candidates[0].content.parts[0].text.trim();
-      } else {
-        throw new Error('Unexpected API response structure');
-      }
-    } catch (structureError) {
-      console.error('❌ Error parsing response structure:', structureError);
-      throw new Error('Failed to parse Google AI Studio response');
-    }
+    const aiResponse = response.data.choices[0].message.content.trim();
     console.log('🤖 Raw AI Response:', aiResponse);
 
     // Parse JSON response
@@ -3938,40 +3802,26 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the newsletter content now:`;
 
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
-      contents: [
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
         {
-          parts: [
-            {
-              text: prompt
-            }
-          ]
+          role: 'user',
+          content: prompt
         }
       ],
-      generationConfig: {
-        maxOutputTokens: 800,
-        temperature: 0.8
-      }
+      temperature: 0.8,
+      max_tokens: 800
     }, {
       headers: {
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+        'X-Title': 'Festival Newsletter Auto-Generator'
       }
     });
 
-    // Safely extract response with error handling
-    let aiResponse;
-    try {
-      if (response.data && response.data.candidates && response.data.candidates[0] && 
-          response.data.candidates[0].content && response.data.candidates[0].content.parts && 
-          response.data.candidates[0].content.parts[0]) {
-        aiResponse = response.data.candidates[0].content.parts[0].text.trim();
-      } else {
-        throw new Error('Unexpected API response structure');
-      }
-    } catch (structureError) {
-      console.error('❌ Error parsing response structure:', structureError);
-      throw new Error('Failed to parse Google AI Studio response');
-    }
+    const aiResponse = response.data.choices[0].message.content.trim();
     console.log('🤖 Raw AI Response:', aiResponse);
 
     // Parse JSON response
@@ -4115,41 +3965,27 @@ Generate ONE perfect title that would make people want to open this email immedi
 TITLE:`;
 
     try {
-      const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
-        contents: [
+      const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
           {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
+            role: 'user',
+            content: prompt
           }
         ],
-        generationConfig: {
-          maxOutputTokens: 50,
+        max_tokens: 50,
         temperature: 0.8
-        }
       }, {
         headers: {
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+          'X-Title': 'Festival Newsletter Title Generator'
         },
         timeout: 15000
       });
 
-      // Safely extract response with error handling
-      let dynamicTitle;
-      try {
-        if (response.data && response.data.candidates && response.data.candidates[0] && 
-            response.data.candidates[0].content && response.data.candidates[0].content.parts && 
-            response.data.candidates[0].content.parts[0]) {
-          dynamicTitle = response.data.candidates[0].content.parts[0].text.trim();
-        } else {
-          throw new Error('Unexpected API response structure for dynamic title');
-        }
-      } catch (structureError) {
-        console.error('❌ Error parsing dynamic title response:', structureError);
-        throw new Error('Failed to parse Google AI Studio response');
-      }
+      let dynamicTitle = response.data.choices[0].message.content.trim();
       
       console.log('🔍 Raw Gemini title response:', JSON.stringify(dynamicTitle));
       
@@ -6148,53 +5984,13 @@ app.post('/api/shop-settings/:shopDomain/festival-template', async (req, res) =>
   }
 });
 
-// Helper function to log model usage for transparency
-function logModelUsage(endpoint, model) {
-  console.log(`🔍 [${endpoint}] Using model: ${model}`);
-  console.log(`💰 Model pricing: ${model === 'gemini-2.5-flash' ? 'FREE tier (60 req/min)' : 'Check Google AI pricing'}`);
-}
-
-// Model Configuration Check Endpoint
-app.get('/api/model-config', (req, res) => {
-  const modelConfig = {
-    currentModel: 'gemini-2.5-flash',
-    modelType: 'Fast, cost-effective model',
-    pricing: 'FREE tier (60 requests/minute)',
-    endpoints: {
-      'AI Email Generation': 'gemini-2.5-flash',
-      'Festival Name Generation': 'gemini-2.5-flash', 
-      'Blog Newsletter Generation': 'gemini-2.5-flash',
-      'Festival Newsletter Generation': 'gemini-2.5-flash',
-      'Dynamic Title Generation': 'gemini-2.5-flash',
-      'Festival Name Refinement': 'gemini-2.5-flash'
-    },
-    apiProvider: 'Google AI Studio (Direct)',
-    rateLimits: {
-      free: '60 requests/minute',
-      paid: 'Higher limits available'
-    },
-    lastUpdated: new Date().toISOString()
-  };
-  
-  res.json({
-    success: true,
-    modelConfig,
-    message: 'All endpoints using gemini-2.5-flash (fast, free tier)'
-  });
-});
-
 // AI Email Generation - Generate email content with Gemini
 app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) => {
-  // Declare variables outside try block for access in catch block
-  let shopSettings, hasMailjetKeys, hasShopEmailSettings, recipients, emailPrompt;
-  
   try {
     const { shopDomain } = req.params;
-    const { recipientEmails } = req.body;
-    emailPrompt = req.body.emailPrompt;
+    const { recipientEmails, emailPrompt } = req.body;
     
     console.log(`🤖 Generating AI email for shop: ${shopDomain}`);
-    logModelUsage('AI Email Generation', 'gemini-2.5-flash');
     
     // Validate input
     if (!recipientEmails || !emailPrompt) {
@@ -6204,22 +6000,17 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
       });
     }
     
-    // Check if email is configured for this shop (check global Mailjet keys OR shop settings)
-    shopSettings = await ShopSettings.getShopSettings(shopDomain);
-    hasMailjetKeys = !!(process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY);
-    hasShopEmailSettings = !!(shopSettings && shopSettings.emailSettings && shopSettings.emailSettings.enabled);
-    
-    if (!hasMailjetKeys && !hasShopEmailSettings) {
+    // Check if email is configured for this shop
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    if (!shopSettings || !shopSettings.emailSettings.enabled) {
       return res.status(400).json({
         success: false,
-        error: 'Email is not configured for this shop. Please configure email settings first or contact support.'
+        error: 'Email is not configured for this shop. Please configure email settings first.'
       });
     }
     
-    console.log(`📧 Email config check - Mailjet keys: ${hasMailjetKeys}, Shop settings: ${hasShopEmailSettings}`);
-    
     // Parse recipient emails
-    recipients = recipientEmails
+    const recipients = recipientEmails
       .split(/[,\n]/)
       .map(email => email.trim())
       .filter(email => email && email.includes('@'));
@@ -6231,352 +6022,74 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
       });
     }
     
-    // Generate email content with Hugging Face API
-    const prompt = `Create a professional email for: ${emailPrompt}
-Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
+    // Generate email content with Gemini
+    const prompt = `You are an expert email marketing specialist. Generate a professional and engaging email based on the following prompt:
 
-Please provide a JSON response with this exact format:
+"${emailPrompt}"
+
+Requirements:
+1. Create a compelling subject line (max 60 characters)
+2. Write engaging HTML email content with proper formatting
+3. Include a clear call-to-action
+4. Make it professional yet friendly
+5. Ensure it's mobile-responsive
+6. Use appropriate emojis sparingly
+
+Store Information:
+- Store Name: ${shopSettings.emailSettings.fromName || 'Our Store'}
+- From Email: ${shopSettings.emailSettings.fromEmail}
+
+Response Format:
 {
-  "subject": "Compelling subject line",
-  "htmlContent": "Complete HTML email with DOCTYPE, head, body, and professional styling"
+  "subject": "Your compelling subject line here",
+  "htmlContent": "Your complete HTML email content here with proper formatting, including <html>, <head>, and <body> tags"
 }
 
-Make it professional, mobile-responsive, and include clear call-to-action.`;
+Generate ONLY the JSON response, no additional text.`;
 
-    console.log('🤖 Generating email content with Hugging Face API...');
+    console.log('🤖 Generating email content with Gemini...');
     
-    // Helper function for Hugging Face API call with multiple model fallbacks
-    const makeAPICallWithRetry = async (maxRetries = 1) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
-          
-          const aiResponse = await callHuggingFaceAPI(prompt, {
-            maxLength: 800,
-            temperature: 0.7
-          });
-          
-          console.log('✅ Successfully generated email content');
-          console.log('🔍 AI Response length:', aiResponse.length);
-          console.log('🔍 AI Response preview:', aiResponse.substring(0, 200) + '...');
-          
-          return aiResponse;
-          
-        } catch (error) {
-          console.log(`❌ Attempt ${attempt} failed:`, error.response?.status, error.message);
-          
-          if (error.response?.status === 429) {
-            if (attempt < maxRetries) {
-              // Exponential backoff: 2^attempt seconds with jitter
-              const baseDelay = Math.pow(2, attempt) * 1000;
-              const jitter = Math.random() * 1000;
-              const delay = baseDelay + jitter;
-              
-              console.log(`⏳ Rate limited (429), waiting ${Math.round(delay/1000)}s before retry ${attempt + 1}...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              continue;
-            } else {
-              console.log('🔄 Max retries reached for rate limit, using fallback content...');
-              throw new Error('RATE_LIMIT_EXCEEDED');
-            }
-          } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-            // Handle timeout errors specifically
-            if (attempt < maxRetries) {
-              const delay = 2000 * attempt; // Shorter delay for timeouts
-              console.log(`🕐 Request timeout, waiting ${Math.round(delay/1000)}s before retry ${attempt + 1}...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              continue;
-            } else {
-              console.log('🔄 Max retries reached for timeout, using fallback content...');
-              throw new Error('REQUEST_TIMEOUT');
-            }
-          } else {
-            // For other errors, don't retry
-            throw error;
-          }
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
         }
-      }
-    };
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+        'X-Title': 'AI Email Generator'
+      },
+      timeout: 30000
+    });
+
+    let aiResponse = response.data.choices[0].message.content.trim();
     
-    let aiResponse = await makeAPICallWithRetry();
-    
-    // Clean up the response and extract JSON
-    aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // Clean up the response
+    aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
     
     let emailData;
     try {
       emailData = JSON.parse(aiResponse);
-      
-      // Clean any generic footers from AI-generated content
-      if (emailData.htmlContent) {
-        emailData.htmlContent = cleanGenericFooters(emailData.htmlContent);
-        console.log('🧹 Cleaned generic footers from AI-generated content');
-      }
-      
-      console.log('🎉 SUCCESS: Hugging Face generated email successfully!');
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      console.error('AI Response length:', aiResponse.length);
-      console.error('AI Response preview:', aiResponse.substring(0, 500) + '...');
-      
-      // Check if response was truncated due to token limit
-      if (aiResponse.includes('"finishReason": "MAX_TOKENS"') || aiResponse.length > 3000) {
-        console.log('🔄 Response appears to be truncated, trying to extract what we can...');
-      }
-      
-      // Fallback to manual parsing - more robust approach
-      try {
+      // Fallback to manual parsing
       const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
-        
-        // Try to extract HTML content even if incomplete
-        let htmlContent = '';
-        
-        // Look for the start of htmlContent
-        const contentStartIndex = aiResponse.indexOf('"htmlContent":');
-        if (contentStartIndex !== -1) {
-          // Extract everything from htmlContent onwards
-          const contentPart = aiResponse.substring(contentStartIndex);
-          
-          // Find the opening quote after the colon
-          const openQuoteIndex = contentPart.indexOf('"', contentPart.indexOf(':') + 1);
-          if (openQuoteIndex !== -1) {
-            // Extract content from opening quote until the response ends
-            const contentStart = openQuoteIndex + 1;
-            let extractedContent = contentPart.substring(contentStart);
-            
-            // Clean up any trailing incomplete parts
-            extractedContent = extractedContent.replace(/\\n/g, '\n').replace(/\\"/g, '"');
-            
-            // Remove any trailing incomplete JSON or quotes
-            extractedContent = extractedContent.replace(/["}]*$/, '');
-            
-            console.log('🔍 Extracted HTML content length:', extractedContent.length);
-            console.log('🔍 HTML content preview:', extractedContent.substring(0, 200) + '...');
-            
-            htmlContent = extractedContent;
-          }
-        }
-        
-        if (subjectMatch) {
-          // If we have partial HTML content, try to complete it
-          if (htmlContent && htmlContent.length > 50) {
-            console.log('🔧 Completing partial HTML content...');
-            
-            // Ensure we have a proper HTML structure
-            if (!htmlContent.includes('<!DOCTYPE html>')) {
-              htmlContent = '<!DOCTYPE html>\n' + htmlContent;
-            }
-            
-            // If missing opening html tag, add it
-            if (!htmlContent.includes('<html')) {
-              htmlContent = htmlContent.replace('<!DOCTYPE html>', '<!DOCTYPE html>\n<html lang="en">');
-            }
-            
-            // Close unclosed style tags
-            if (htmlContent.includes('<style>') && !htmlContent.includes('</style>')) {
-              htmlContent += '\n        </style>\n    </head>\n    <body>';
-            }
-            
-            // Close unclosed head tags
-            if (htmlContent.includes('<head>') && !htmlContent.includes('</head>')) {
-              htmlContent += '\n    </head>\n    <body>';
-            }
-            
-            // Add body content if missing
-            if (!htmlContent.includes('<body')) {
-              if (htmlContent.includes('</head>')) {
-                htmlContent = htmlContent.replace('</head>', '</head>\n    <body>');
-              } else {
-                htmlContent += '\n    <body>';
-              }
-            }
-            
-            // Add rich content if body is too basic or empty
-            const hasRichContent = htmlContent.includes('<div') || htmlContent.includes('<p') || htmlContent.includes('<h1') || htmlContent.includes('<table');
-            if (!hasRichContent || htmlContent.length < 1000) {
-              console.log('🎨 Adding rich festival content to enhance the email...');
-              
-              // Generate contextual content based on the subject
-              const subjectLower = subjectMatch[1].toLowerCase();
-              const isDiwali = subjectLower.includes('diwali') || subjectLower.includes('deepavali');
-              const hasDiscount = subjectLower.includes('50%') || subjectLower.includes('off') || subjectLower.includes('discount');
-              
-              const richContent = `
-        <div style="max-width: 600px; margin: 0 auto; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #ffffff;">
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 0;">
-                <h1 style="margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🪔 ${subjectMatch[1]}</h1>
-                <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">Limited Time Festival Offer</p>
-            </div>
-            
-            <!-- Main Content -->
-            <div style="padding: 40px 30px; background: #ffffff;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 style="color: #333; font-size: 24px; margin-bottom: 15px;">🎉 Festival Celebration Special!</h2>
-                    <p style="font-size: 18px; color: #555; line-height: 1.6; margin-bottom: 20px;">
-                        ${isDiwali ? 'Light up your Diwali celebrations with our exclusive festive collection!' : 'Celebrate this special festival with our amazing collection!'}
-                    </p>
-                </div>
-                
-                <!-- Offer Highlights -->
-                <div style="background: linear-gradient(135deg, #FFF5F0 0%, #FFEBE0 100%); padding: 30px; border-radius: 15px; margin: 30px 0; border: 2px solid #FFE5D0;">
-                    <h3 style="color: #D2691E; text-align: center; margin-bottom: 20px; font-size: 22px;">✨ What's Inside This Amazing Offer? ✨</h3>
-                    <div style="display: grid; gap: 15px;">
-                        <div style="display: flex; align-items: center; padding: 10px 0;">
-                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">🎁</span>
-                            <span style="color: #333; font-size: 16px;">Exclusive festive collections & traditional wear</span>
-                        </div>
-                        <div style="display: flex; align-items: center; padding: 10px 0;">
-                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">🪔</span>
-                            <span style="color: #333; font-size: 16px;">${isDiwali ? 'Diwali decorations, diyas & lighting essentials' : 'Festival decorations & celebration essentials'}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; padding: 10px 0;">
-                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">🍬</span>
-                            <span style="color: #333; font-size: 16px;">Sweet treats, gift hampers & festive delicacies</span>
-                        </div>
-                        <div style="display: flex; align-items: center; padding: 10px 0;">
-                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">👗</span>
-                            <span style="color: #333; font-size: 16px;">Designer ethnic wear & festival fashion</span>
-                        </div>
-                        ${hasDiscount ? `
-                        <div style="display: flex; align-items: center; padding: 10px 0; background: #FFE5D0; margin-top: 10px; padding: 15px; border-radius: 8px;">
-                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">💥</span>
-                            <span style="color: #D2691E; font-size: 18px; font-weight: bold;">PLUS: 50% OFF on everything - Save Big!</span>
-                        </div>` : ''}
-                    </div>
-                </div>
-                
-                <!-- Call to Action -->
-                <div style="text-align: center; margin: 40px 0;">
-                    <a href="#" style="display: inline-block; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4); transition: transform 0.2s;">
-                        🛍️ Shop Festival Collection Now
-                    </a>
-                    <p style="margin-top: 15px; color: #666; font-size: 14px;">⏰ Limited time offer - Don't miss out!</p>
-                </div>
-                
-                <!-- Additional Info -->
-                <div style="background: #F8F9FA; padding: 25px; border-radius: 10px; margin-top: 30px;">
-                    <h4 style="color: #333; margin-bottom: 15px; text-align: center;">🚚 Why Shop With Us?</h4>
-                    <div style="text-align: center;">
-                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">✅ Free Shipping</span>
-                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">🔄 Easy Returns</span>
-                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">⚡ Fast Delivery</span>
-                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">🎁 Gift Wrapping</span>
-                    </div>
-                </div>
-                
-                <!-- Social Media -->
-                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #EEE;">
-                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Follow us for more festival updates</p>
-                    <div>
-                        <a href="#" style="display: inline-block; margin: 0 10px; color: #FF6B35; text-decoration: none; font-size: 24px;">📘</a>
-                        <a href="#" style="display: inline-block; margin: 0 10px; color: #FF6B35; text-decoration: none; font-size: 24px;">📷</a>
-                        <a href="#" style="display: inline-block; margin: 0 10px; color: #FF6B35; text-decoration: none; font-size: 24px;">🐦</a>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-              
-              // If we have existing content, enhance it, otherwise use rich content
-              if (htmlContent.includes('<body>')) {
-                htmlContent = htmlContent.replace(/<body[^>]*>/, '<body>' + richContent);
-              } else {
-                htmlContent += richContent;
-              }
-            }
-            
-            // Close unclosed tags and add proper ending
-            if (!htmlContent.includes('</body>')) {
-              htmlContent += '\n    </body>';
-            }
-            if (!htmlContent.includes('</html>')) {
-              htmlContent += '\n</html>';
-            }
-            
-            // Clean up any generic footers that might have been generated by AI
-            htmlContent = cleanGenericFooters(htmlContent);
-            
-            console.log('✅ HTML completion finished. Final length:', htmlContent.length);
-          } else {
-            // Generate a complete professional email from scratch
-            htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${subjectMatch[1]}</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .content { padding: 20px 0; }
-        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1 style="margin: 0; color: #333;">🪔 ${subjectMatch[1]}</h1>
-    </div>
-    <div class="content">
-        <p>Celebrate this special festival with amazing offers and deals!</p>
-        <p>We're excited to bring you exclusive discounts and festive joy.</p>
-        <ul>
-            <li>🎉 Special festival discounts</li>
-            <li>✨ Limited time offers</li>
-            <li>🎁 Exclusive deals just for you</li>
-            <li>🪔 Celebrate in style</li>
-        </ul>
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Shop Now</a>
-        </div>
-    </div>
-</body>
-</html>`;
-          }
-          
+      const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}/);
+      
+      if (subjectMatch && contentMatch) {
         emailData = {
           subject: subjectMatch[1],
-            htmlContent: htmlContent
+          htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
         };
-          
-          console.log('✅ Successfully recovered email data from truncated response');
       } else {
-          console.log('⚠️ Could not extract subject from response, using default fallback');
-          // Generate a complete fallback email
-          emailData = {
-            subject: 'Special Offer Just For You! 🎉',
-            htmlContent: `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Special Offer</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .content { padding: 20px 0; }
-        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1 style="margin: 0; color: #333;">🎉 Special Offer!</h1>
-    </div>
-    <div class="content">
-        <p>We have an amazing offer just for you!</p>
-        <p>Don't miss out on these exclusive deals and special promotions.</p>
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Shop Now</a>
-        </div>
-    </div>
-</body>
-</html>`
-          };
-        }
-      } catch (fallbackError) {
-        console.error('Fallback parsing also failed:', fallbackError);
-        throw new Error('Failed to parse AI response even with fallback methods');
+        throw new Error('Failed to parse AI response');
       }
     }
     
@@ -6607,8 +6120,8 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
         ${emailData.htmlContent}
     </div>
     <div class="footer">
-        <p>Best regards,<br>${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}</p>
-        <p><small>This email was sent from ${(hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com'}</small></p>
+        <p>Best regards,<br>${shopSettings.emailSettings.fromName}</p>
+        <p><small>This email was sent from ${shopSettings.emailSettings.fromEmail}</small></p>
     </div>
 </body>
 </html>`;
@@ -6618,8 +6131,8 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
       subject: emailData.subject,
       htmlContent: emailData.htmlContent,
       recipients: recipients,
-      fromEmail: (hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com',
-      fromName: (hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'
+      fromEmail: shopSettings.emailSettings.fromEmail,
+      fromName: shopSettings.emailSettings.fromName
     };
     
     console.log(`✅ AI email generated successfully for ${recipients.length} recipients`);
@@ -6632,164 +6145,6 @@ Make it professional, mobile-responsive, and include clear call-to-action.`;
     
   } catch (error) {
     console.error('❌ Failed to generate AI email:', error);
-    
-    // Handle all AI failures with Smart Email Generation System
-    if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED' || error.message === 'REQUEST_TIMEOUT' || error.message.includes('All Hugging Face models failed')) {
-      const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 
-                         error.message === 'RESPONSE_TRUNCATED' ? 'response size limits' : 'connection timeouts';
-      console.log(`🎯 Using Smart Email Generation System (Hugging Face backup unavailable due to ${reasonMessage})...`);
-      
-      // Create smart subject based on user's prompt
-      let smartSubject = `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
-      
-      // Extract specific details from the prompt
-      const promptLower = emailPrompt.toLowerCase();
-      
-      // Extract discount percentage
-      const discountMatch = emailPrompt.match(/(\d+)%\s*off/i);
-      const discountPercent = discountMatch ? discountMatch[1] : null;
-      
-      // Extract product mentions (expanded list)
-      const productMatches = emailPrompt.match(/\b(pants?|shirt?s?|t-?shirts?|dress|dresses|shoes?|jacket?s?|bags?|accessories?|jeans?|hoodie?s?|skirt?s?|shorts?|cloths?|clothing|apparel|fashion|wear|garments?|tops?|bottoms?|outfits?|suits?|coats?|sweaters?|blouses?|scarves?)\b/gi);
-      const mentionedProducts = productMatches ? [...new Set(productMatches.map(p => p.toLowerCase()))] : [];
-      
-      // Extract occasion/event mentions
-      const occasionMatches = emailPrompt.match(/\b(black friday|cyber monday|christmas|diwali|deepavali|new year|thanksgiving|valentine|easter|mother's day|father's day|halloween|sale|clearance|end of season|summer|winter|spring|fall|autumn|holiday|festival|celebration|wedding|party)\b/gi);
-      const mentionedOccasions = occasionMatches ? [...new Set(occasionMatches.map(o => o.toLowerCase()))] : [];
-      
-      // Extract action words
-      const actionMatches = emailPrompt.match(/\b(buy|shop|purchase|get|grab|save|discount|offer|deal|promotion|announcing|launch|introducing|new|limited|exclusive|special)\b/gi);
-      const mentionedActions = actionMatches ? [...new Set(actionMatches.map(a => a.toLowerCase()))] : [];
-      
-      // Extract sale/offer keywords
-      const saleKeywords = [];
-      if (promptLower.includes('sale')) saleKeywords.push('sale');
-      if (promptLower.includes('offer')) saleKeywords.push('offer');
-      if (promptLower.includes('deal')) saleKeywords.push('deal');
-      if (promptLower.includes('discount')) saleKeywords.push('discount');
-      // Generate smarter subject based on extracted information
-      const storeName = (hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store';
-      
-      if (mentionedOccasions.includes('black friday')) {
-        smartSubject = `🛍️ ${discountPercent ? `${discountPercent}% Off` : 'Black Friday Sale'} - ${storeName}`;
-      } else if (mentionedOccasions.includes('diwali') || mentionedOccasions.includes('deepavali')) {
-        smartSubject = `🪔 ${discountPercent ? `Diwali ${discountPercent}% Off` : 'Diwali Special'} - ${storeName}`;
-      } else if (mentionedOccasions.some(o => ['christmas', 'holiday'].includes(o))) {
-        smartSubject = `🎄 ${discountPercent ? `Holiday ${discountPercent}% Off` : 'Holiday Special'} - ${storeName}`;
-      } else if (mentionedOccasions.length > 0) {
-        const occasion = mentionedOccasions[0].charAt(0).toUpperCase() + mentionedOccasions[0].slice(1);
-        smartSubject = `🎉 ${discountPercent ? `${occasion} ${discountPercent}% Off` : `${occasion} Special`} - ${storeName}`;
-      } else if (discountPercent) {
-        smartSubject = `💰 ${discountPercent}% Off ${mentionedProducts.length > 0 ? mentionedProducts[0].charAt(0).toUpperCase() + mentionedProducts[0].slice(1) : 'Everything'} - ${storeName}`;
-      } else if (mentionedActions.includes('new') || mentionedActions.includes('launch')) {
-        smartSubject = `✨ New Arrivals at ${storeName}`;
-      } else {
-        smartSubject = `💝 Special Offer from ${storeName}`;
-      }
-      
-      // Create professional fallback content based on the prompt
-      const fallbackEmailData = {
-        subject: smartSubject,
-        htmlContent: `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Important Update</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .content { padding: 20px 0; }
-        .highlight { background: #e7f3ff; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0; border-radius: 4px; }
-        .footer { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; color: #666; }
-        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1 style="margin: 0; color: #333;">Hello from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}!</h1>
-    </div>
-    
-    <div class="content">
-        <p>Thank you for being a valued customer! We're excited to share something special with you.</p>
-        
-        ${discountPercent || mentionedProducts.length > 0 || mentionedOccasions.length > 0 ? `
-        <div class="highlight">
-            <h3 style="margin-top: 0; color: #007bff;">🎯 ${mentionedOccasions.length > 0 ? mentionedOccasions[0].charAt(0).toUpperCase() + mentionedOccasions[0].slice(1) + ' ' : ''}Special Offer Details:</h3>
-            ${discountPercent ? `<p><strong>💰 ${discountPercent}% OFF</strong> - Limited time offer!</p>` : ''}
-            ${mentionedProducts.length > 0 ? `<p><strong>📦 Featured Products:</strong> ${mentionedProducts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}</p>` : ''}
-            ${mentionedOccasions.length > 0 ? `<p><strong>🎉 Special Occasion:</strong> ${mentionedOccasions.map(o => o.charAt(0).toUpperCase() + o.slice(1)).join(', ')}</p>` : ''}
-            ${mentionedActions.length > 0 ? `<p><strong>⚡ Action:</strong> ${mentionedActions.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')} now!</p>` : ''}
-            <p>Don't miss out on these incredible ${discountPercent ? 'savings' : 'offers'}!</p>
-        </div>
-        ` : ''}
-        
-        ${promptLower.includes('diwali') || promptLower.includes('deepavali') ? `
-        <p>🪔 <strong>Diwali Special!</strong> This festival of lights brings us great joy, and we want to share that with you through exclusive offers and celebrations.</p>
-        <ul>
-            <li>🎆 Festive discounts on your favorite products</li>
-            <li>✨ Special Diwali collection items</li>
-            <li>🎁 Limited-time exclusive offers</li>
-            <li>🪔 Celebrate with us this season of lights</li>
-        </ul>
-        ` : promptLower.includes('festival') || promptLower.includes('celebration') ? `
-        <p>🎉 <strong>Festival Celebration!</strong> It's time to celebrate, and we want you to be part of our special festivities.</p>
-        <ul>
-            <li>🎪 Festival exclusive products and deals</li>
-            <li>🎈 Special celebration offers</li>
-            <li>🎁 Limited-time festival discounts</li>
-            <li>✨ Join our festive community</li>
-        </ul>
-        ` : promptLower.includes('discount') || promptLower.includes('sale') || promptLower.includes('offer') ? `
-        <p>💰 <strong>Exclusive Offers Just for You!</strong> We've prepared some amazing deals that you won't want to miss.</p>
-        <ul>
-            <li>🏷️ Special discounts on premium products</li>
-            <li>💸 Limited-time savings opportunities</li>
-            <li>🎯 Personalized offers based on your preferences</li>
-            <li>⚡ Flash sales and exclusive deals</li>
-        </ul>
-        ` : `
-        <p>✨ <strong>Something Special Awaits!</strong> We're always working to bring you the best experience and exciting new opportunities.</p>
-        <ul>
-            <li>📧 Exclusive updates and early access</li>
-            <li>🎁 Special offers and promotions</li>
-            <li>💡 Helpful tips and insights</li>
-            <li>🛍️ Priority access to new arrivals</li>
-        </ul>
-        `}
-        
-        <p>This is just the beginning! Stay tuned for more exciting updates and don't miss out on these amazing opportunities.</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Explore Now</a>
-        </div>
-    </div>
-    
-    <div class="footer">
-        <p>Best regards,<br><strong>${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}</strong></p>
-        <p><small>This email was sent from ${(hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com'}</small></p>
-        <p><small>💡 This email was generated using our backup system to ensure reliable delivery.</small></p>
-    </div>
-</body>
-</html>`,
-        recipients: recipients,
-        fromEmail: (hasShopEmailSettings && shopSettings.emailSettings.fromEmail) || 'support@yourstore.com',
-        fromName: (hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store',
-        isBackup: true
-      };
-      
-      console.log('✅ Smart Email Generation System completed successfully');
-      
-      return res.json({
-        success: true,
-        emailData: fallbackEmailData,
-        message: 'Email content generated successfully using Smart Email Generation System',
-        isBackup: true
-      });
-    }
-    
-    // For other errors, return standard error response
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to generate email content'

@@ -2177,23 +2177,12 @@
                     })
                 });
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-                }
-                
                 const data = await response.json();
                 
                 if (data.success) {
                     shopifyGeneratedEmailData = data.emailData;
                     displayShopifyGeneratedEmail(data.emailData);
-                    
-                    if (data.isBackup) {
-                        showShopifyMessage('Email content generated successfully using backup system due to high AI service demand. Content quality remains professional!', 'warning');
-                    } else {
-                        showShopifyMessage('Email content generated successfully!', 'success');
-                    }
-                    
+                    showShopifyMessage('Email content generated successfully!', 'success');
                     document.getElementById('shopify-send-generated-email-btn').disabled = false;
                 } else {
                     showShopifyMessage(data.error || 'Failed to generate email content', 'error');
@@ -2201,15 +2190,7 @@
                 
             } catch (error) {
                 console.error('Failed to generate email content:', error);
-                
-                // Handle specific error types
-                if (error.message.includes('429') || error.message.includes('rate limit')) {
-                    showShopifyMessage('AI service is experiencing high demand. Please try again in a moment, or we\'ll use our backup content generator.', 'warning');
-                } else if (error.message.includes('timeout')) {
-                    showShopifyMessage('Request timed out. Please check your connection and try again.', 'error');
-                } else {
-                    showShopifyMessage('Failed to generate email content. Please try again.', 'error');
-                }
+                showShopifyMessage('Failed to generate email content', 'error');
             } finally {
                 showShopifyLoading(false);
                 document.getElementById('shopify-generate-email-btn').disabled = false;
@@ -2219,17 +2200,7 @@
         
         function displayShopifyGeneratedEmail(emailData) {
             document.getElementById('shopify-generated-subject').textContent = emailData.subject;
-            
-            // Extract content from HTML document for preview (avoid layout conflicts)
-            let contentToDisplay = emailData.htmlContent;
-            if (emailData.htmlContent.includes('<body>')) {
-                const bodyMatch = emailData.htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                if (bodyMatch) {
-                    contentToDisplay = bodyMatch[1];
-                }
-            }
-            
-            document.getElementById('shopify-generated-content').innerHTML = contentToDisplay;
+            document.getElementById('shopify-generated-content').innerHTML = emailData.htmlContent;
             document.getElementById('shopify-generated-recipients').textContent = emailData.recipients.join(', ');
             document.getElementById('shopify-generated-email-preview').style.display = 'block';
         }

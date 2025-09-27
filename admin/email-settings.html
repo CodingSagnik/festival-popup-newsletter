@@ -792,23 +792,12 @@
                     })
                 });
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-                }
-                
                 const data = await response.json();
                 
                 if (data.success) {
                     generatedEmailData = data.emailData;
                     displayGeneratedEmail(data.emailData);
-                    
-                    if (data.isBackup) {
-                        showAlert('Email content generated successfully using backup system due to high AI service demand. Content quality remains professional!', 'warning');
-                    } else {
-                        showAlert('Email content generated successfully!', 'success');
-                    }
-                    
+                    showAlert('Email content generated successfully!', 'success');
                     document.getElementById('send-generated-email-btn').disabled = false;
                 } else {
                     showAlert(data.error || 'Failed to generate email content', 'error');
@@ -816,15 +805,7 @@
                 
             } catch (error) {
                 console.error('Failed to generate email content:', error);
-                
-                // Handle specific error types
-                if (error.message.includes('429') || error.message.includes('rate limit')) {
-                    showAlert('AI service is experiencing high demand. Please try again in a moment, or we\'ll use our backup content generator.', 'warning');
-                } else if (error.message.includes('timeout')) {
-                    showAlert('Request timed out. Please check your connection and try again.', 'error');
-                } else {
-                    showAlert('Failed to generate email content. Please try again.', 'error');
-                }
+                showAlert('Failed to generate email content', 'error');
             } finally {
                 showLoading(false);
                 document.getElementById('generate-email-btn').disabled = false;
@@ -834,17 +815,7 @@
         
         function displayGeneratedEmail(emailData) {
             document.getElementById('generated-subject').textContent = emailData.subject;
-            
-            // Extract content from HTML document for preview (avoid layout conflicts)
-            let contentToDisplay = emailData.htmlContent;
-            if (emailData.htmlContent.includes('<body>')) {
-                const bodyMatch = emailData.htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                if (bodyMatch) {
-                    contentToDisplay = bodyMatch[1];
-                }
-            }
-            
-            document.getElementById('generated-content').innerHTML = contentToDisplay;
+            document.getElementById('generated-content').innerHTML = emailData.htmlContent;
             document.getElementById('generated-recipients').textContent = emailData.recipients.join(', ');
             document.getElementById('generated-email-preview').style.display = 'block';
         }

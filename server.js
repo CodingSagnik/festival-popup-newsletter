@@ -6181,7 +6181,7 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
             headers: {
               'Content-Type': 'application/json'
             },
-            timeout: 30000
+            timeout: 60000
           });
           
           console.log('✅ Successfully generated email content');
@@ -6204,8 +6204,19 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
               console.log('🔄 Max retries reached for rate limit, using fallback content...');
               throw new Error('RATE_LIMIT_EXCEEDED');
             }
+          } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            // Handle timeout errors specifically
+            if (attempt < maxRetries) {
+              const delay = 2000 * attempt; // Shorter delay for timeouts
+              console.log(`🕐 Request timeout, waiting ${Math.round(delay/1000)}s before retry ${attempt + 1}...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            } else {
+              console.log('🔄 Max retries reached for timeout, using fallback content...');
+              throw new Error('REQUEST_TIMEOUT');
+            }
           } else {
-            // For non-rate-limit errors, don't retry
+            // For other errors, don't retry
             throw error;
           }
         }
@@ -6400,9 +6411,10 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
   } catch (error) {
     console.error('❌ Failed to generate AI email:', error);
     
-    // Handle rate limit errors and response truncation with fallback content
-    if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED') {
-      const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 'response size limits';
+    // Handle rate limit errors, response truncation, and timeouts with fallback content
+    if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED' || error.message === 'REQUEST_TIMEOUT') {
+      const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 
+                         error.message === 'RESPONSE_TRUNCATED' ? 'response size limits' : 'connection timeouts';
       console.log(`🔄 Generating high-quality fallback email content due to ${reasonMessage}...`);
       
       // Create smart subject based on user's prompt

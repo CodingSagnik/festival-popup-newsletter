@@ -6168,16 +6168,16 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     }
     
     // Generate email content with Gemini - optimized prompt
-    const prompt = `Create email for: "${emailPrompt}"
+    const prompt = `Email for: "${emailPrompt}"
 Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
 
-JSON only:
+JSON format:
 {
-  "subject": "Subject (max 50 chars)",
-  "htmlContent": "Complete responsive HTML email"
+  "subject": "Subject (max 45 chars)",
+  "htmlContent": "Basic HTML email with styles"
 }
 
-Make it professional with clear CTA.`;
+Professional, responsive, clear CTA.`;
 
     console.log('🤖 Generating email content with Gemini...');
     
@@ -6198,7 +6198,7 @@ Make it professional with clear CTA.`;
               }
             ],
             generationConfig: {
-              maxOutputTokens: 2500,
+              maxOutputTokens: 1500,
               temperature: 0.7
             }
           }, {
@@ -6263,17 +6263,18 @@ Make it professional with clear CTA.`;
       if (response.data && response.data.candidates && response.data.candidates[0]) {
         const candidate = response.data.candidates[0];
         
-        // Check if response was truncated due to MAX_TOKENS
-        if (candidate.finishReason === 'MAX_TOKENS' && !candidate.content.parts) {
-          console.log('🔄 Response was truncated due to MAX_TOKENS, generating fallback content...');
-          throw new Error('RESPONSE_TRUNCATED');
-        }
-        
-        // Normal response with content
+        // Normal response with content (even if truncated, try to parse what we have)
         if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
           aiResponse = candidate.content.parts[0].text.trim();
+          
+          // If response was truncated, we'll handle it in JSON parsing below
+          if (candidate.finishReason === 'MAX_TOKENS') {
+            console.log('⚠️ Response was truncated due to MAX_TOKENS, but attempting to parse partial content...');
+          }
         } else {
-          throw new Error('Unexpected API response structure');
+          // Only throw RESPONSE_TRUNCATED if we have no content at all
+          console.log('🔄 No content in response, generating fallback content...');
+          throw new Error('RESPONSE_TRUNCATED');
         }
       } else {
         throw new Error('No candidates in response');
@@ -6669,9 +6670,6 @@ Make it professional with clear CTA.`;
     <div class="content">
         <p>Thank you for being a valued customer! We're excited to share something special with you.</p>
         
-        <div class="highlight">
-            <p><strong>About your request:</strong> "${emailPrompt}"</p>
-        </div>
         
         ${promptLower.includes('diwali') || promptLower.includes('deepavali') ? `
         <p>🪔 <strong>Diwali Special!</strong> This festival of lights brings us great joy, and we want to share that with you through exclusive offers and celebrations.</p>

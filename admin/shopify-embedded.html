@@ -1004,7 +1004,7 @@
                         
                         <div style="margin-bottom: 16px;">
                             <strong>Email Content:</strong>
-                            <div id="shopify-generated-content" style="padding: 15px; background: white; border-radius: 4px; margin-top: 5px; border: 1px solid #e8f5e9; min-height: 200px;"></div>
+                            <div id="shopify-generated-content" style="padding: 15px; background: white; border-radius: 4px; margin-top: 5px; border: 1px solid #e8f5e9; min-height: 200px; max-height: 600px; overflow-y: auto; width: 100%; box-sizing: border-box;"></div>
                         </div>
                         
                         <div>
@@ -2200,7 +2200,17 @@
         
         function displayShopifyGeneratedEmail(emailData) {
             document.getElementById('shopify-generated-subject').textContent = emailData.subject;
-            document.getElementById('shopify-generated-content').innerHTML = emailData.htmlContent;
+            
+            // Create an iframe to isolate the email content styles
+            const contentDiv = document.getElementById('shopify-generated-content');
+            contentDiv.innerHTML = `
+                <iframe 
+                    style="width: 100%; border: none; min-height: 400px; max-height: 600px; border-radius: 4px;" 
+                    srcdoc="${emailData.htmlContent.replace(/"/g, '&quot;')}"
+                    onload="this.style.height = Math.min(this.contentWindow.document.body.scrollHeight + 20, 600) + 'px'">
+                </iframe>
+            `;
+            
             document.getElementById('shopify-generated-recipients').textContent = emailData.recipients.join(', ');
             document.getElementById('shopify-generated-email-preview').style.display = 'block';
         }

@@ -439,7 +439,7 @@
                         </div>
                         <div class="form-group">
                             <label><strong>Email Content:</strong></label>
-                            <div id="generated-content" style="padding: 15px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef; min-height: 200px;"></div>
+                            <div id="generated-content" style="padding: 15px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef; min-height: 200px; max-height: 600px; overflow-y: auto; width: 100%; box-sizing: border-box;"></div>
                         </div>
                         <div class="form-group">
                             <label><strong>Recipients:</strong></label>
@@ -815,7 +815,17 @@
         
         function displayGeneratedEmail(emailData) {
             document.getElementById('generated-subject').textContent = emailData.subject;
-            document.getElementById('generated-content').innerHTML = emailData.htmlContent;
+            
+            // Create an iframe to isolate the email content styles
+            const contentDiv = document.getElementById('generated-content');
+            contentDiv.innerHTML = `
+                <iframe 
+                    style="width: 100%; border: none; min-height: 400px; max-height: 600px; border-radius: 4px;" 
+                    srcdoc="${emailData.htmlContent.replace(/"/g, '&quot;')}"
+                    onload="this.style.height = Math.min(this.contentWindow.document.body.scrollHeight + 20, 600) + 'px'">
+                </iframe>
+            `;
+            
             document.getElementById('generated-recipients').textContent = emailData.recipients.join(', ');
             document.getElementById('generated-email-preview').style.display = 'block';
         }

@@ -6015,6 +6015,7 @@ Requirements:
 4. Make it professional yet friendly
 5. Ensure it's mobile-responsive
 6. Use appropriate emojis sparingly
+7. Use "Dear Customer" as the greeting (never use placeholders like [First Name] or [Customer])
 
 Store Information:
 - Store Name: ${shopSettings.emailSettings.fromName || 'Our Store'}

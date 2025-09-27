@@ -841,18 +841,6 @@
                     <div class="stat-label">Active Now</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number" id="total-subscribers">0</div>
-                    <div class="stat-label">Total Subscribers</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number" id="festival-subscribers">0</div>
-                    <div class="stat-label">Festival Subscribers</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number" id="blog-subscribers">0</div>
-                    <div class="stat-label">Blog Subscribers</div>
-                </div>
-                <div class="stat-item">
                     <div class="stat-number" id="newsletters-sent">0</div>
                     <div class="stat-label">Emails Sent</div>
                 </div>
@@ -1187,18 +1175,12 @@
                 try {
                     const analyticsData = await makeAuthenticatedRequest(`/api/newsletter/analytics/${shop}`);
                     if (analyticsData) {
-                        document.getElementById('total-subscribers').textContent = analyticsData.totalSubscribers || 0;
-                        document.getElementById('festival-subscribers').textContent = analyticsData.festivalSubscribers || 0;
-                        document.getElementById('blog-subscribers').textContent = analyticsData.blogSubscribers || 0;
-                        document.getElementById('newsletters-sent').textContent = analyticsData.blogPostsSent || 0;
+                        document.getElementById('newsletters-sent').textContent = analyticsData.emailsSent || 0;
                         console.log('✅ Analytics data loaded');
                     }
                 } catch (analyticsError) {
                     console.warn('⚠️ Analytics data failed to load:', analyticsError);
                     // Set default values
-                    document.getElementById('total-subscribers').textContent = '0';
-                    document.getElementById('festival-subscribers').textContent = '0';
-                    document.getElementById('blog-subscribers').textContent = '0';
                     document.getElementById('newsletters-sent').textContent = '0';
                 }
 

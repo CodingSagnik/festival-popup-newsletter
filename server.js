@@ -1906,6 +1906,13 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
       }
     }
     
+    // Get AI email count from shop settings
+    const shopSettings = await getShopSettings(shopDomain);
+    const aiEmailsSent = shopSettings?.analytics?.emailsSent || 0;
+    
+    // Calculate total emails sent (blog newsletters + AI emails)
+    const totalEmailsSent = (sentNewsletters?.length || 0) + aiEmailsSent;
+
     const analytics = {
       totalSubscribers: allSubscribers?.length || 0,
       activeSubscribers: activeSubscribers?.length || 0,
@@ -1913,6 +1920,8 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
       blogSubscribers: blogSubscribers?.length || 0,
       blogPostsTotal: blogPosts?.length || 0,
       blogPostsSent: sentNewsletters?.length || 0,
+      aiEmailsSent: aiEmailsSent,
+      emailsSent: totalEmailsSent,
       recentSubscribers: recentSubscribers?.length || 0,
       activeFestivals: activeFestivals || [],
       currentFestival: activeFestivals?.length > 0 ? activeFestivals[0] : null,
@@ -6252,6 +6261,24 @@ app.post('/api/shop-settings/:shopDomain/ai-email/send', async (req, res) => {
     }
     
     console.log(`📊 Email sending complete: ${successful} successful, ${failed} failed`);
+    
+    // Track AI-generated emails in shop settings for analytics
+    if (successful > 0) {
+      try {
+        const shopSettings = await getShopSettings(shopDomain);
+        if (!shopSettings.analytics) {
+          shopSettings.analytics = {};
+        }
+        if (!shopSettings.analytics.emailsSent) {
+          shopSettings.analytics.emailsSent = 0;
+        }
+        shopSettings.analytics.emailsSent += successful;
+        await setShopSettings(shopDomain, shopSettings);
+        console.log(`📊 Updated email count: +${successful} emails (total: ${shopSettings.analytics.emailsSent})`);
+      } catch (trackingError) {
+        console.warn('⚠️ Failed to update email analytics:', trackingError.message);
+      }
+    }
     
     res.json({
       success: true,

@@ -6027,25 +6027,49 @@ Generate ONLY the JSON response, no additional text.`;
 
     let aiResponse = response.data.choices[0].message.content.trim();
     
-    // Clean up the response
+    // Clean up the response more thoroughly
     aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    // Remove control characters that cause JSON parsing issues
+    aiResponse = aiResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    // Fix common JSON formatting issues
+    aiResponse = aiResponse.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+    
+    console.log('🤖 Cleaned AI Response:', aiResponse.substring(0, 200) + '...');
     
     let emailData;
     try {
       emailData = JSON.parse(aiResponse);
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      // Fallback to manual parsing
-      const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
-      const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}/);
+      console.log('Raw response causing error:', aiResponse);
       
-      if (subjectMatch && contentMatch) {
-        emailData = {
-          subject: subjectMatch[1],
-          htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
-        };
-      } else {
-        throw new Error('Failed to parse AI response');
+      // More robust fallback parsing
+      try {
+        // Try to extract JSON object from response
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          let cleanJson = jsonMatch[0];
+          // Fix escaped quotes and newlines
+          cleanJson = cleanJson.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+          emailData = JSON.parse(cleanJson);
+        } else {
+          throw new Error('No JSON object found in response');
+        }
+      } catch (secondParseError) {
+        console.error('Fallback parsing also failed:', secondParseError);
+        
+        // Final manual extraction
+        const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
+        const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}?$/);
+        
+        if (subjectMatch && contentMatch) {
+          emailData = {
+            subject: subjectMatch[1],
+            htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, '\t')
+          };
+        } else {
+          throw new Error('Failed to parse AI response - no valid subject or content found');
+        }
       }
     }
     

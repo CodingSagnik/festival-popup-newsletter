@@ -6288,26 +6288,43 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
         
         // Try to extract HTML content even if incomplete
         let htmlContent = '';
-        const contentStartMatch = aiResponse.match(/"htmlContent":\s*"([^"]*)/);
         
-        if (contentStartMatch) {
-          // Extract everything after htmlContent until we find a reasonable end
-          const contentStart = aiResponse.indexOf('"htmlContent"');
-          const contentSubstring = aiResponse.substring(contentStart);
+        // Look for the start of htmlContent
+        const contentStartIndex = aiResponse.indexOf('"htmlContent":');
+        if (contentStartIndex !== -1) {
+          // Extract everything from htmlContent onwards
+          const contentPart = aiResponse.substring(contentStartIndex);
           
-          // Try to find a more complete HTML structure
-          const htmlMatch = contentSubstring.match(/"htmlContent":\s*"(.*?)(?:<!DOCTYPE|<html)/);
-          if (htmlMatch) {
-            htmlContent = htmlMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-          } else {
-            // Use the basic match if available
-            htmlContent = contentStartMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          // Find the opening quote after the colon
+          const openQuoteIndex = contentPart.indexOf('"', contentPart.indexOf(':') + 1);
+          if (openQuoteIndex !== -1) {
+            // Extract content from opening quote until the response ends
+            const contentStart = openQuoteIndex + 1;
+            let extractedContent = contentPart.substring(contentStart);
+            
+            // Clean up any trailing incomplete parts
+            extractedContent = extractedContent.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            
+            // Remove any trailing incomplete JSON or quotes
+            extractedContent = extractedContent.replace(/["}]*$/, '');
+            
+            htmlContent = extractedContent;
           }
         }
         
-        if (subjectMatch && htmlContent) {
-          // Ensure we have a complete HTML structure
-          if (!htmlContent.includes('</html>')) {
+        if (subjectMatch) {
+          // If we have partial HTML content, try to complete it
+          if (htmlContent && htmlContent.length > 50) {
+            // We have some HTML content, try to complete it
+            if (!htmlContent.includes('</html>')) {
+              // Close any unclosed tags and add proper ending
+              htmlContent += `
+                </div>
+              </body>
+            </html>`;
+            }
+          } else {
+            // Generate a complete professional email from scratch
             htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -6350,7 +6367,38 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
           
           console.log('✅ Successfully recovered email data from truncated response');
         } else {
-          throw new Error('Could not extract subject or content from truncated response');
+          console.log('⚠️ Could not extract subject from response, using default fallback');
+          // Generate a complete fallback email
+          emailData = {
+            subject: 'Special Offer Just For You! 🎉',
+            htmlContent: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Offer</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .content { padding: 20px 0; }
+        .cta-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 style="margin: 0; color: #333;">🎉 Special Offer!</h1>
+    </div>
+    <div class="content">
+        <p>We have an amazing offer just for you!</p>
+        <p>Don't miss out on these exclusive deals and special promotions.</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="#" class="cta-button" style="color: white; text-decoration: none;">Shop Now</a>
+        </div>
+    </div>
+</body>
+</html>`
+          };
         }
       } catch (fallbackError) {
         console.error('Fallback parsing also failed:', fallbackError);

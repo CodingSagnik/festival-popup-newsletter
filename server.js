@@ -223,10 +223,10 @@ const ColorThief = require('colorthief');
 // Hugging Face API helper with multiple model fallbacks
 async function callHuggingFaceAPI(prompt, options = {}) {
   const models = [
-    'microsoft/DialoGPT-medium',
-    'microsoft/DialoGPT-large', 
-    'facebook/blenderbot-400M-distill',
-    'bigscience/bloom-560m'
+    'gpt2',
+    'distilgpt2',
+    'EleutherAI/gpt-j-6B',
+    'bigscience/bloom-1b7'
   ];
   
   const maxLength = options.maxLength || 500;
@@ -242,8 +242,9 @@ async function callHuggingFaceAPI(prompt, options = {}) {
         {
           inputs: prompt,
           parameters: {
-            max_new_tokens: maxLength,
+            max_length: maxLength,
             temperature: temperature,
+            do_sample: true,
             return_full_text: false
           }
         },
@@ -255,6 +256,9 @@ async function callHuggingFaceAPI(prompt, options = {}) {
           timeout: 30000
         }
       );
+      
+      console.log(`🔍 Response status: ${response.status}`);
+      console.log(`🔍 Response data:`, JSON.stringify(response.data, null, 2));
       
       if (response.data && response.data[0] && response.data[0].generated_text) {
         const text = response.data[0].generated_text.trim();

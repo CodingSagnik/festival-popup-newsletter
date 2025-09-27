@@ -268,6 +268,65 @@ app.options('*', (req, res) => {
   res.sendStatus(200);
 });
 
+// Helper function for AI requests with fallback models
+async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
+  // List of free models to try in order (best to fallback)
+  const models = [
+    'meta-llama/llama-3.2-3b-instruct:free',
+    'microsoft/phi-3-mini-128k-instruct:free', 
+    'mistralai/mistral-7b-instruct:free',
+    'google/gemini-2.0-flash-exp:free'
+  ];
+
+  let response = null;
+  let lastError = null;
+
+  // Try each model with retry logic
+  for (const model of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`🔄 Trying ${model} (attempt ${attempt})`);
+        
+        response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: model,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: maxTokens,
+          temperature: temperature
+        }, {
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
+            'X-Title': 'AI Email Generator'
+          },
+          timeout: 30000
+        });
+
+        console.log(`✅ Successfully generated with ${model}`);
+        return response; // Success - return response
+      } catch (error) {
+        lastError = error;
+        console.log(`❌ ${model} attempt ${attempt} failed:`, error.response?.status, error.response?.statusText);
+        
+        // If rate limited (429), wait before retry
+        if (error.response?.status === 429 && attempt === 1) {
+          console.log('⏳ Rate limited, waiting 2 seconds before retry...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+  }
+  
+  // If all models failed, throw the last error
+  console.log('❌ All AI models failed');
+  throw lastError || new Error('All AI models are currently unavailable');
+}
+
 // Main app route - serve Shopify-embedded admin interface
 app.get('/', (req, res) => {
   // Check if this is a Shopify app request (has shop parameter or Shopify headers)
@@ -573,25 +632,7 @@ Date: ${dateStr}
 Festival name:`;
 
   try {
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 100,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'Festival Popup Generator'
-      },
-      timeout: 15000
-    });
+    const response = await makeAIRequest(prompt, 100, 0.7);
 
     let festivalName = response.data.choices[0].message.content.trim();
     
@@ -2597,20 +2638,7 @@ Examples of good refinements:
 
 Only respond with the refined festival name, nothing else.`;
 
-        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-          model: 'google/gemini-2.0-flash-exp:free',
-          messages: [{ role: 'user', content: promptWithContext }],
-          max_tokens: 50,
-          temperature: 0.7
-        }, {
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-            'X-Title': 'Festival Popup Generator'
-          },
-          timeout: 15000
-        });
+        const response = await makeAIRequest(promptWithContext, 50, 0.7);
 
         let refinedName = response.data.choices[0].message.content.trim();
         refinedName = refinedName.replace(/["']/g, '').split('\n')[0];
@@ -3522,24 +3550,7 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the blog newsletter content now:`;
 
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.8,
-      max_tokens: 600
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'Blog Newsletter Auto-Generator'
-      }
-    });
+    const response = await makeAIRequest(prompt, 600, 0.8);
 
     const aiResponse = response.data.choices[0].message.content.trim();
     console.log('🤖 Raw AI Response:', aiResponse);
@@ -3802,24 +3813,7 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the newsletter content now:`;
 
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.8,
-      max_tokens: 800
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'Festival Newsletter Auto-Generator'
-      }
-    });
+    const response = await makeAIRequest(prompt, 800, 0.8);
 
     const aiResponse = response.data.choices[0].message.content.trim();
     console.log('🤖 Raw AI Response:', aiResponse);
@@ -3965,25 +3959,7 @@ Generate ONE perfect title that would make people want to open this email immedi
 TITLE:`;
 
     try {
-      const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 50,
-        temperature: 0.8
-      }, {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-          'X-Title': 'Festival Newsletter Title Generator'
-        },
-        timeout: 15000
-      });
+      const response = await makeAIRequest(prompt, 50, 0.8);
 
       let dynamicTitle = response.data.choices[0].message.content.trim();
       
@@ -6047,27 +6023,8 @@ Response Format:
 
 Generate ONLY the JSON response, no additional text.`;
 
-    console.log('🤖 Generating email content with Gemini...');
-    
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
-        'X-Title': 'AI Email Generator'
-      },
-      timeout: 30000
-    });
+    console.log('🤖 Generating email content with AI...');
+    const response = await makeAIRequest(prompt, 2000, 0.7);
 
     let aiResponse = response.data.choices[0].message.content.trim();
     

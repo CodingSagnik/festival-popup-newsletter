@@ -6168,17 +6168,16 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     }
     
     // Generate email content with Gemini - optimized prompt
-    const prompt = `Create a professional email for: "${emailPrompt}"
-
+    const prompt = `Create email for: "${emailPrompt}"
 Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
 
-Return ONLY this JSON format:
+JSON only:
 {
-  "subject": "Compelling subject (max 60 chars)",
-  "htmlContent": "Complete HTML email with DOCTYPE, head, styles, and body tags"
+  "subject": "Subject (max 50 chars)",
+  "htmlContent": "Complete responsive HTML email"
 }
 
-Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
+Make it professional with clear CTA.`;
 
     console.log('🤖 Generating email content with Gemini...');
     
@@ -6198,10 +6197,10 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
                 ]
               }
             ],
-          generationConfig: {
-            maxOutputTokens: 4000,
-            temperature: 0.7
-          }
+            generationConfig: {
+              maxOutputTokens: 2500,
+              temperature: 0.7
+            }
           }, {
             headers: {
               'Content-Type': 'application/json'

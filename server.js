@@ -6045,6 +6045,8 @@ Generate the JSON response now:`;
     aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
     // Remove control characters that cause JSON parsing issues
     aiResponse = aiResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    // Remove model-specific tokens (like Mistral's <s> and </s> tokens)
+    aiResponse = aiResponse.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, '');
     
     console.log('🤖 Raw AI Response (first 300 chars):', aiResponse.substring(0, 300) + '...');
     

@@ -223,9 +223,9 @@ const ColorThief = require('colorthief');
 // Hugging Face API helper with multiple model fallbacks
 async function callHuggingFaceAPI(prompt, options = {}) {
   const models = [
-    'gpt2',
-    'distilgpt2',
-    'EleutherAI/gpt-j-6B',
+    'openai-community/gpt2',
+    'distilbert/distilgpt2',
+    'EleutherAI/gpt-j-6b',
     'bigscience/bloom-1b7'
   ];
   

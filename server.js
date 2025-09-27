@@ -6014,13 +6014,20 @@ Store Information:
 - Store Name: ${shopSettings.emailSettings.fromName || 'Our Store'}
 - From Email: ${shopSettings.emailSettings.fromEmail}
 
-Response Format:
+Response Format - IMPORTANT:
 {
   "subject": "Your compelling subject line here",
   "htmlContent": "Your complete HTML email content here with proper formatting, including <html>, <head>, and <body> tags"
 }
 
-Generate ONLY the JSON response, no additional text.`;
+CRITICAL INSTRUCTIONS:
+- Use DOUBLE QUOTES (") only, never backticks (`) or template literals
+- Escape any quotes inside strings with \"
+- Use \\n for line breaks in the HTML content
+- Generate ONLY valid JSON, no additional text or markdown
+- Do NOT use JavaScript template literal syntax
+
+Generate the JSON response now:`;
 
     console.log('🤖 Generating email content with AI...');
     const response = await makeAIRequest(prompt, 2000, 0.7);
@@ -6031,44 +6038,76 @@ Generate ONLY the JSON response, no additional text.`;
     aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
     // Remove control characters that cause JSON parsing issues
     aiResponse = aiResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-    // Fix common JSON formatting issues
-    aiResponse = aiResponse.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
     
-    console.log('🤖 Cleaned AI Response:', aiResponse.substring(0, 200) + '...');
+    console.log('🤖 Raw AI Response (first 300 chars):', aiResponse.substring(0, 300) + '...');
     
     let emailData;
-    try {
-      emailData = JSON.parse(aiResponse);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
-      console.log('Raw response causing error:', aiResponse);
+    
+    // Handle template literals (backticks) that Llama models sometimes use
+    if (aiResponse.includes('`')) {
+      console.log('🔧 Detected template literals, converting to proper JSON...');
       
-      // More robust fallback parsing
-      try {
-        // Try to extract JSON object from response
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          let cleanJson = jsonMatch[0];
-          // Fix escaped quotes and newlines
-          cleanJson = cleanJson.replace(/\\"/g, '"').replace(/\\n/g, '\n');
-          emailData = JSON.parse(cleanJson);
-        } else {
-          throw new Error('No JSON object found in response');
-        }
-      } catch (secondParseError) {
-        console.error('Fallback parsing also failed:', secondParseError);
-        
-        // Final manual extraction
-        const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
-        const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}?$/);
-        
-        if (subjectMatch && contentMatch) {
+      // Extract subject and content manually since it's using template literals
+      const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
+      const contentMatch = aiResponse.match(/`([\s\S]*?)`\s*}/);
+      
+      if (subjectMatch && contentMatch) {
+        emailData = {
+          subject: subjectMatch[1],
+          htmlContent: contentMatch[1].trim()
+        };
+        console.log('✅ Successfully extracted content from template literal format');
+      } else {
+        // Try alternative pattern
+        const altContentMatch = aiResponse.match(/"htmlContent":\s*`([\s\S]*?)`/);
+        if (subjectMatch && altContentMatch) {
           emailData = {
             subject: subjectMatch[1],
-            htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, '\t')
+            htmlContent: altContentMatch[1].trim()
           };
+          console.log('✅ Successfully extracted content using alternative pattern');
         } else {
-          throw new Error('Failed to parse AI response - no valid subject or content found');
+          throw new Error('Failed to extract content from template literal format');
+        }
+      }
+    } else {
+      // Standard JSON parsing
+      try {
+        emailData = JSON.parse(aiResponse);
+        console.log('✅ Successfully parsed as standard JSON');
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        console.log('Raw response causing error:', aiResponse.substring(0, 500) + '...');
+        
+        // More robust fallback parsing
+        try {
+          // Try to extract JSON object from response
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            let cleanJson = jsonMatch[0];
+            // Fix escaped quotes and newlines
+            cleanJson = cleanJson.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            emailData = JSON.parse(cleanJson);
+            console.log('✅ Successfully parsed using fallback method');
+          } else {
+            throw new Error('No JSON object found in response');
+          }
+        } catch (secondParseError) {
+          console.error('Fallback parsing also failed:', secondParseError);
+          
+          // Final manual extraction
+          const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
+          const contentMatch = aiResponse.match(/"htmlContent":\s*"([\s\S]+?)"\s*}?$/);
+          
+          if (subjectMatch && contentMatch) {
+            emailData = {
+              subject: subjectMatch[1],
+              htmlContent: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, '\t')
+            };
+            console.log('✅ Successfully extracted using manual regex parsing');
+          } else {
+            throw new Error('Failed to parse AI response - no valid subject or content found');
+          }
         }
       }
     }

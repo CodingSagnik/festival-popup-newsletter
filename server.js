@@ -272,8 +272,8 @@ app.options('*', (req, res) => {
 async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
   // List of free models to try in order (best to fallback)
   const models = [
-    'meta-llama/llama-3.2-3b-instruct:free',
     'mistralai/mistral-7b-instruct:free',
+    'meta-llama/llama-3.2-3b-instruct:free',
     'google/gemini-2.0-flash-exp:free'
   ];
 
@@ -303,19 +303,25 @@ async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
             'HTTP-Referer': 'https://festival-popup-newsletter.onrender.com',
             'X-Title': 'AI Email Generator'
           },
-          timeout: 30000
+          timeout: 15000
         });
 
         console.log(`✅ Successfully generated with ${model}`);
         return response; // Success - return response
       } catch (error) {
         lastError = error;
-        console.log(`❌ ${model} attempt ${attempt} failed:`, error.response?.status, error.response?.statusText);
+        const errorType = error.code === 'ECONNABORTED' ? 'TIMEOUT' : error.response?.status || 'UNKNOWN';
+        console.log(`❌ ${model} attempt ${attempt} failed:`, errorType, error.response?.statusText || error.message);
         
         // If rate limited (429), wait before retry
         if (error.response?.status === 429 && attempt === 1) {
           console.log('⏳ Rate limited, waiting 2 seconds before retry...');
           await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        // If timeout or connection error, skip to next model faster
+        else if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
+          console.log('⏭️ Connection/timeout error, skipping to next model...');
+          break; // Skip to next model
         }
       }
     }

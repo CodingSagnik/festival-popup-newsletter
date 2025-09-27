@@ -273,7 +273,6 @@ async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
   // List of free models to try in order (best to fallback)
   const models = [
     'meta-llama/llama-3.2-3b-instruct:free',
-    'microsoft/phi-3-mini-128k-instruct:free', 
     'mistralai/mistral-7b-instruct:free',
     'google/gemini-2.0-flash-exp:free'
   ];

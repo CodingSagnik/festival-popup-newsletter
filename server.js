@@ -270,15 +270,14 @@ app.options('*', (req, res) => {
 
 // Helper function for AI requests with fallback models
 async function makeAIRequest(prompt, maxTokens = 2000, temperature = 0.7) {
-  // Expanded list of free models to avoid rate limits
+  // Current verified free models available on OpenRouter (as of late 2024)
   const models = [
     'mistralai/mistral-7b-instruct:free',
     'meta-llama/llama-3.2-3b-instruct:free',
     'google/gemini-2.0-flash-exp:free',
-    'microsoft/phi-3.5-mini-instruct:free',
+    'qwen/qwen-2.5-72b-instruct:free',
     'qwen/qwen-2-7b-instruct:free',
-    'huggingfaceh4/zephyr-7b-beta:free',
-    'openchat/openchat-7b:free'
+    'huggingfaceh4/zephyr-7b-beta:free'
   ];
 
   let response = null;

@@ -220,6 +220,63 @@ const path = require('path');
 const sharp = require('sharp');
 const ColorThief = require('colorthief');
 
+// Hugging Face API helper with multiple model fallbacks
+async function callHuggingFaceAPI(prompt, options = {}) {
+  const models = [
+    'microsoft/DialoGPT-medium',
+    'microsoft/DialoGPT-large', 
+    'facebook/blenderbot-400M-distill',
+    'bigscience/bloom-560m'
+  ];
+  
+  const maxLength = options.maxLength || 500;
+  const temperature = options.temperature || 0.7;
+  
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    try {
+      console.log(`🤖 Trying Hugging Face model: ${model} (${i + 1}/${models.length})`);
+      
+      const response = await axios.post(
+        `https://api-inference.huggingface.co/models/${model}`,
+        {
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: maxLength,
+            temperature: temperature,
+            return_full_text: false
+          }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+      
+      if (response.data && response.data[0] && response.data[0].generated_text) {
+        const text = response.data[0].generated_text.trim();
+        console.log(`✅ Success with model: ${model}`);
+        return text;
+      }
+      
+      throw new Error('No generated text in response');
+      
+    } catch (error) {
+      console.log(`⚠️ Model ${model} failed:`, error.message);
+      
+      if (i === models.length - 1) {
+        throw new Error(`All Hugging Face models failed. Last error: ${error.message}`);
+      }
+      
+      // Wait a bit before trying next model
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 // Helper function to clean generic footers from AI-generated content
 function cleanGenericFooters(htmlContent) {
   // Remove copyright footers with generic company info
@@ -598,7 +655,7 @@ Date: ${dateStr}
 Festival name:`;
 
   try {
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -610,7 +667,7 @@ Festival name:`;
       ],
       generationConfig: {
         maxOutputTokens: 100,
-        temperature: 0.7
+      temperature: 0.7
       }
     }, {
       headers: {
@@ -2623,7 +2680,7 @@ app.post('/api/generate-festival-name', async (req, res) => {
        // Use database result for specific festivals - it's more accurate!
        festivalName = databaseFestival;
        console.log('✅ Using database festival (specific):', festivalName);
-     } else if (process.env.GOOGLE_AI_API_KEY) {
+     } else if (process.env.HUGGINGFACE_API_KEY) {
        console.log('🤖 Generic festival detected, attempting AI refinement...');
       // 3. For generic festivals, try AI refinement with database context
       try {
@@ -2636,7 +2693,7 @@ Examples of good refinements:
 
 Only respond with the refined festival name, nothing else.`;
 
-        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
           contents: [
             {
               parts: [
@@ -2648,7 +2705,7 @@ Only respond with the refined festival name, nothing else.`;
           ],
           generationConfig: {
             maxOutputTokens: 50,
-            temperature: 0.7
+          temperature: 0.7
           }
         }, {
           headers: {
@@ -3580,7 +3637,7 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the blog newsletter content now:`;
 
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -3874,7 +3931,7 @@ IMPORTANT: All text elements in the content MUST have style='color: #ffffff;' fo
 
 Generate the newsletter content now:`;
 
-    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+    const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -4051,7 +4108,7 @@ Generate ONE perfect title that would make people want to open this email immedi
 TITLE:`;
 
     try {
-      const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
+      const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.HUGGINGFACE_API_KEY}`, {
         contents: [
           {
             parts: [
@@ -4063,7 +4120,7 @@ TITLE:`;
         ],
         generationConfig: {
           maxOutputTokens: 50,
-          temperature: 0.8
+        temperature: 0.8
         }
       }, {
         headers: {
@@ -6167,44 +6224,36 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
       });
     }
     
-    // Generate email content with Gemini - optimized prompt
-    const prompt = `${emailPrompt}
+    // Generate email content with Hugging Face API
+    const prompt = `Create a professional email for: ${emailPrompt}
+Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
 
-JSON: {"subject":"","htmlContent":""}`;
+Please provide a JSON response with this exact format:
+{
+  "subject": "Compelling subject line",
+  "htmlContent": "Complete HTML email with DOCTYPE, head, body, and professional styling"
+}
 
-    console.log('🤖 Generating email content with Gemini...');
+Make it professional, mobile-responsive, and include clear call-to-action.`;
+
+    console.log('🤖 Generating email content with Hugging Face API...');
     
-    // Helper function for single Gemini attempt (no retries for MAX_TOKENS)
+    // Helper function for Hugging Face API call with multiple model fallbacks
     const makeAPICallWithRetry = async (maxRetries = 1) => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
           
-          const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`, {
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              maxOutputTokens: 200,
-              temperature: 0.5,
-              topP: 0.8,
-              topK: 40
-            }
-          }, {
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            timeout: 60000
+          const aiResponse = await callHuggingFaceAPI(prompt, {
+            maxLength: 800,
+            temperature: 0.7
           });
           
           console.log('✅ Successfully generated email content');
-          return response;
+          console.log('🔍 AI Response length:', aiResponse.length);
+          console.log('🔍 AI Response preview:', aiResponse.substring(0, 200) + '...');
+          
+          return aiResponse;
           
         } catch (error) {
           console.log(`❌ Attempt ${attempt} failed:`, error.response?.status, error.message);
@@ -6242,64 +6291,10 @@ JSON: {"subject":"","htmlContent":""}`;
       }
     };
     
-    const response = await makeAPICallWithRetry();
-
-    // Debug: Log response metadata for monitoring
-    console.log('🔍 Response metadata:', {
-      candidatesCount: response.data.candidates?.length,
-      finishReason: response.data.candidates?.[0]?.finishReason,
-      modelVersion: response.data.modelVersion,
-      totalTokens: response.data.usageMetadata?.totalTokenCount
-    });
+    let aiResponse = await makeAPICallWithRetry();
     
-    // Safely extract AI response with proper error handling
-    let aiResponse;
-    try {
-      if (response.data && response.data.candidates && response.data.candidates[0]) {
-        const candidate = response.data.candidates[0];
-        
-        // Debug: Log the actual response structure
-        console.log('🔍 DEBUG Candidate structure:', JSON.stringify({
-          hasContent: !!candidate.content,
-          hasParts: !!(candidate.content && candidate.content.parts),
-          partsLength: candidate.content && candidate.content.parts ? candidate.content.parts.length : 0,
-          finishReason: candidate.finishReason
-        }, null, 2));
-        
-        // Check if we have actual content in parts
-        if (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) {
-          aiResponse = candidate.content.parts[0].text.trim();
-          
-          // If response was truncated, we'll handle it in JSON parsing below
-          if (candidate.finishReason === 'MAX_TOKENS') {
-            console.log('⚠️ Response was truncated due to MAX_TOKENS, but attempting to parse partial content...');
-          }
-        } else if (candidate.finishReason === 'MAX_TOKENS') {
-          // Special case: MAX_TOKENS with no parts (common with Gemini 2.5-flash)
-          console.log('⚠️ Gemini MAX_TOKENS issue detected, switching to smart fallback system...');
-          throw new Error('RESPONSE_TRUNCATED');
-        } else {
-          // No content at all
-          console.log('🔄 No content in response, generating fallback content...');
-          throw new Error('RESPONSE_TRUNCATED');
-        }
-      } else {
-        throw new Error('No candidates in response');
-      }
-    } catch (structureError) {
-      console.error('❌ Error parsing Google AI Studio response structure:', structureError);
-      
-      // If response was truncated, throw specific error to trigger fallback
-      if (structureError.message === 'RESPONSE_TRUNCATED') {
-        throw structureError;
-      }
-      
-      console.error('❌ Response data:', JSON.stringify(response.data, null, 2));
-      throw new Error('Failed to parse Google AI Studio response');
-    }
-    
-    // Clean up the response
-    aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    // Clean up the response and extract JSON
+    aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
     let emailData;
     try {
@@ -6311,7 +6306,7 @@ JSON: {"subject":"","htmlContent":""}`;
         console.log('🧹 Cleaned generic footers from AI-generated content');
       }
       
-      console.log('🎉 SUCCESS: Gemini generated email successfully!');
+      console.log('🎉 SUCCESS: Hugging Face generated email successfully!');
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.error('AI Response length:', aiResponse.length);
@@ -6324,7 +6319,7 @@ JSON: {"subject":"","htmlContent":""}`;
       
       // Fallback to manual parsing - more robust approach
       try {
-        const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
+      const subjectMatch = aiResponse.match(/"subject":\s*"([^"]+)"/);
         
         // Try to extract HTML content even if incomplete
         let htmlContent = '';
@@ -6532,13 +6527,13 @@ JSON: {"subject":"","htmlContent":""}`;
 </html>`;
           }
           
-          emailData = {
-            subject: subjectMatch[1],
+        emailData = {
+          subject: subjectMatch[1],
             htmlContent: htmlContent
-          };
+        };
           
           console.log('✅ Successfully recovered email data from truncated response');
-        } else {
+      } else {
           console.log('⚠️ Could not extract subject from response, using default fallback');
           // Generate a complete fallback email
           emailData = {
@@ -6635,7 +6630,7 @@ JSON: {"subject":"","htmlContent":""}`;
     if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED' || error.message === 'REQUEST_TIMEOUT') {
       const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 
                          error.message === 'RESPONSE_TRUNCATED' ? 'response size limits' : 'connection timeouts';
-      console.log(`🎯 Using Smart Email Generation System (Gemini backup unavailable due to ${reasonMessage})...`);
+      console.log(`🎯 Using Smart Email Generation System (Hugging Face backup unavailable due to ${reasonMessage})...`);
       
       // Create smart subject based on user's prompt
       let smartSubject = `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;

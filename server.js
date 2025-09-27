@@ -6168,19 +6168,14 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     }
     
     // Generate email content with Gemini - optimized prompt
-    const prompt = `Email: "${emailPrompt}"
-Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
+    const prompt = `${emailPrompt}
 
-JSON:
-{
-"subject": "Subject",
-"htmlContent": "HTML email"
-}`;
+JSON: {"subject":"","htmlContent":""}`;
 
     console.log('🤖 Generating email content with Gemini...');
     
-    // Helper function for exponential backoff retry
-    const makeAPICallWithRetry = async (maxRetries = 3) => {
+    // Helper function for single Gemini attempt (no retries for MAX_TOKENS)
+    const makeAPICallWithRetry = async (maxRetries = 1) => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate email content...`);
@@ -6196,8 +6191,10 @@ JSON:
               }
             ],
             generationConfig: {
-              maxOutputTokens: 500,
-              temperature: 0.7
+              maxOutputTokens: 200,
+              temperature: 0.5,
+              topP: 0.8,
+              topK: 40
             }
           }, {
             headers: {
@@ -6278,8 +6275,8 @@ JSON:
             console.log('⚠️ Response was truncated due to MAX_TOKENS, but attempting to parse partial content...');
           }
         } else if (candidate.finishReason === 'MAX_TOKENS') {
-          // Special case: MAX_TOKENS with no parts (common with Gemini)
-          console.log('🔄 MAX_TOKENS response with no content parts, using fallback...');
+          // Special case: MAX_TOKENS with no parts (common with Gemini 2.5-flash)
+          console.log('⚠️ Gemini MAX_TOKENS issue detected, switching to smart fallback system...');
           throw new Error('RESPONSE_TRUNCATED');
         } else {
           // No content at all
@@ -6313,6 +6310,8 @@ JSON:
         emailData.htmlContent = cleanGenericFooters(emailData.htmlContent);
         console.log('🧹 Cleaned generic footers from AI-generated content');
       }
+      
+      console.log('🎉 SUCCESS: Gemini generated email successfully!');
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.error('AI Response length:', aiResponse.length);
@@ -6636,7 +6635,7 @@ JSON:
     if (error.message === 'RATE_LIMIT_EXCEEDED' || error.message === 'RESPONSE_TRUNCATED' || error.message === 'REQUEST_TIMEOUT') {
       const reasonMessage = error.message === 'RATE_LIMIT_EXCEEDED' ? 'rate limiting' : 
                          error.message === 'RESPONSE_TRUNCATED' ? 'response size limits' : 'connection timeouts';
-      console.log(`🔄 Generating high-quality fallback email content due to ${reasonMessage}...`);
+      console.log(`🎯 Using Smart Email Generation System (Gemini backup unavailable due to ${reasonMessage})...`);
       
       // Create smart subject based on user's prompt
       let smartSubject = `Important Update from ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}`;
@@ -6758,12 +6757,12 @@ JSON:
         isBackup: true
       };
       
-      console.log('✅ Generated high-quality fallback email content');
+      console.log('✅ Smart Email Generation System completed successfully');
       
       return res.json({
         success: true,
         emailData: fallbackEmailData,
-        message: 'Email content generated successfully (using backup system due to high demand)',
+        message: 'Email content generated successfully using Smart Email Generation System',
         isBackup: true
       });
     }

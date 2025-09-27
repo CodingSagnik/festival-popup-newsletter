@@ -6168,16 +6168,14 @@ app.post('/api/shop-settings/:shopDomain/ai-email/generate', async (req, res) =>
     }
     
     // Generate email content with Gemini - optimized prompt
-    const prompt = `Create: "${emailPrompt}"
+    const prompt = `Email: "${emailPrompt}"
 Store: ${(hasShopEmailSettings && shopSettings.emailSettings.fromName) || 'Our Store'}
 
 JSON:
 {
-  "subject": "Short subject",
-  "htmlContent": "Simple HTML email"
-}
-
-Basic responsive design.`;
+"subject": "Subject",
+"htmlContent": "HTML email"
+}`;
 
     console.log('🤖 Generating email content with Gemini...');
     
@@ -6198,7 +6196,7 @@ Basic responsive design.`;
               }
             ],
             generationConfig: {
-              maxOutputTokens: 800,
+              maxOutputTokens: 500,
               temperature: 0.7
             }
           }, {
@@ -6271,16 +6269,20 @@ Basic responsive design.`;
           finishReason: candidate.finishReason
         }, null, 2));
         
-        // Normal response with content (even if truncated, try to parse what we have)
-        if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
+        // Check if we have actual content in parts
+        if (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) {
           aiResponse = candidate.content.parts[0].text.trim();
           
           // If response was truncated, we'll handle it in JSON parsing below
           if (candidate.finishReason === 'MAX_TOKENS') {
             console.log('⚠️ Response was truncated due to MAX_TOKENS, but attempting to parse partial content...');
           }
+        } else if (candidate.finishReason === 'MAX_TOKENS') {
+          // Special case: MAX_TOKENS with no parts (common with Gemini)
+          console.log('🔄 MAX_TOKENS response with no content parts, using fallback...');
+          throw new Error('RESPONSE_TRUNCATED');
         } else {
-          // Only throw RESPONSE_TRUNCATED if we have no content at all
+          // No content at all
           console.log('🔄 No content in response, generating fallback content...');
           throw new Error('RESPONSE_TRUNCATED');
         }

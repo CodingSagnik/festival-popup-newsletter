@@ -6349,21 +6349,98 @@ Requirements: Mobile-responsive, professional, clear CTA, appropriate emojis.`;
               }
             }
             
-            // Add some basic content if body is empty
-            if (!htmlContent.includes('<div') && !htmlContent.includes('<p') && !htmlContent.includes('<h1')) {
-              htmlContent += `
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-            <div style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px;">
-                <h1 style="margin: 0; font-size: 28px;">🪔 ${subjectMatch[1]}</h1>
+            // Add rich content if body is too basic or empty
+            const hasRichContent = htmlContent.includes('<div') || htmlContent.includes('<p') || htmlContent.includes('<h1') || htmlContent.includes('<table');
+            if (!hasRichContent || htmlContent.length < 1000) {
+              console.log('🎨 Adding rich festival content to enhance the email...');
+              
+              // Generate contextual content based on the subject
+              const subjectLower = subjectMatch[1].toLowerCase();
+              const isDiwali = subjectLower.includes('diwali') || subjectLower.includes('deepavali');
+              const hasDiscount = subjectLower.includes('50%') || subjectLower.includes('off') || subjectLower.includes('discount');
+              
+              const richContent = `
+        <div style="max-width: 600px; margin: 0 auto; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #ffffff;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 0;">
+                <h1 style="margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🪔 ${subjectMatch[1]}</h1>
+                <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">Limited Time Festival Offer</p>
             </div>
-            <div style="padding: 30px 0;">
-                <p style="font-size: 18px; color: #333;">Celebrate this special festival with amazing offers!</p>
-                <p style="font-size: 16px; color: #666;">Don't miss out on our exclusive Diwali deals and festive collections.</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="#" style="display: inline-block; background: #FF6B35; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Shop Now 🛍️</a>
+            
+            <!-- Main Content -->
+            <div style="padding: 40px 30px; background: #ffffff;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #333; font-size: 24px; margin-bottom: 15px;">🎉 Festival Celebration Special!</h2>
+                    <p style="font-size: 18px; color: #555; line-height: 1.6; margin-bottom: 20px;">
+                        ${isDiwali ? 'Light up your Diwali celebrations with our exclusive festive collection!' : 'Celebrate this special festival with our amazing collection!'}
+                    </p>
+                </div>
+                
+                <!-- Offer Highlights -->
+                <div style="background: linear-gradient(135deg, #FFF5F0 0%, #FFEBE0 100%); padding: 30px; border-radius: 15px; margin: 30px 0; border: 2px solid #FFE5D0;">
+                    <h3 style="color: #D2691E; text-align: center; margin-bottom: 20px; font-size: 22px;">✨ What's Inside This Amazing Offer? ✨</h3>
+                    <div style="display: grid; gap: 15px;">
+                        <div style="display: flex; align-items: center; padding: 10px 0;">
+                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">🎁</span>
+                            <span style="color: #333; font-size: 16px;">Exclusive festive collections & traditional wear</span>
+                        </div>
+                        <div style="display: flex; align-items: center; padding: 10px 0;">
+                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">🪔</span>
+                            <span style="color: #333; font-size: 16px;">${isDiwali ? 'Diwali decorations, diyas & lighting essentials' : 'Festival decorations & celebration essentials'}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; padding: 10px 0;">
+                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">🍬</span>
+                            <span style="color: #333; font-size: 16px;">Sweet treats, gift hampers & festive delicacies</span>
+                        </div>
+                        <div style="display: flex; align-items: center; padding: 10px 0;">
+                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">👗</span>
+                            <span style="color: #333; font-size: 16px;">Designer ethnic wear & festival fashion</span>
+                        </div>
+                        ${hasDiscount ? `
+                        <div style="display: flex; align-items: center; padding: 10px 0; background: #FFE5D0; margin-top: 10px; padding: 15px; border-radius: 8px;">
+                            <span style="color: #FF6B35; font-size: 24px; margin-right: 15px;">💥</span>
+                            <span style="color: #D2691E; font-size: 18px; font-weight: bold;">PLUS: 50% OFF on everything - Save Big!</span>
+                        </div>` : ''}
+                    </div>
+                </div>
+                
+                <!-- Call to Action -->
+                <div style="text-align: center; margin: 40px 0;">
+                    <a href="#" style="display: inline-block; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4); transition: transform 0.2s;">
+                        🛍️ Shop Festival Collection Now
+                    </a>
+                    <p style="margin-top: 15px; color: #666; font-size: 14px;">⏰ Limited time offer - Don't miss out!</p>
+                </div>
+                
+                <!-- Additional Info -->
+                <div style="background: #F8F9FA; padding: 25px; border-radius: 10px; margin-top: 30px;">
+                    <h4 style="color: #333; margin-bottom: 15px; text-align: center;">🚚 Why Shop With Us?</h4>
+                    <div style="text-align: center;">
+                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">✅ Free Shipping</span>
+                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">🔄 Easy Returns</span>
+                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">⚡ Fast Delivery</span>
+                        <span style="display: inline-block; margin: 5px 10px; color: #666; font-size: 14px;">🎁 Gift Wrapping</span>
+                    </div>
+                </div>
+                
+                <!-- Social Media -->
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #EEE;">
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Follow us for more festival updates</p>
+                    <div>
+                        <a href="#" style="display: inline-block; margin: 0 10px; color: #FF6B35; text-decoration: none; font-size: 24px;">📘</a>
+                        <a href="#" style="display: inline-block; margin: 0 10px; color: #FF6B35; text-decoration: none; font-size: 24px;">📷</a>
+                        <a href="#" style="display: inline-block; margin: 0 10px; color: #FF6B35; text-decoration: none; font-size: 24px;">🐦</a>
+                    </div>
                 </div>
             </div>
         </div>`;
+              
+              // If we have existing content, enhance it, otherwise use rich content
+              if (htmlContent.includes('<body>')) {
+                htmlContent = htmlContent.replace(/<body[^>]*>/, '<body>' + richContent);
+              } else {
+                htmlContent += richContent;
+              }
             }
             
             // Close unclosed tags and add proper ending

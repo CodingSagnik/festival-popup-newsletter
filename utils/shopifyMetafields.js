@@ -616,6 +616,7 @@ class ShopSettings {
     const dataToSave = {
       emailSettings: this.emailSettings,
       festivalSettings: this.festivalSettings,
+      analytics: this.analytics,
       createdAt: this.createdAt,
       updatedAt: new Date()
     };

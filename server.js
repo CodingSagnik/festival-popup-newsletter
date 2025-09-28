@@ -7,89 +7,6 @@ const nodemailer = require('nodemailer');
 // Import Mailjet SDK
 const Mailjet = require('node-mailjet');
 
-// Mailjet Sender Management Functions
-async function addSenderToMailjet(email, name = '') {
-  try {
-    const mailjetApiKey = process.env.MAILJET_API_KEY;
-    const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
-    
-    if (!mailjetApiKey || !mailjetSecretKey) {
-      throw new Error('Mailjet API credentials not configured');
-    }
-    
-    const mailjet = Mailjet.apiConnect(mailjetApiKey, mailjetSecretKey);
-    
-    console.log(`📧 Adding sender to Mailjet: ${email}`);
-    
-    // Add sender and automatically send verification email
-    const request = mailjet
-      .post('sender')
-      .request({
-        Email: email,
-        Name: name || email.split('@')[0]
-      });
-    
-    const response = await request;
-    console.log(`✅ Sender added to Mailjet, verification email sent to: ${email}`);
-    return response.body.Data[0];
-    
-  } catch (error) {
-    // Check if sender already exists
-    if (error.statusCode === 400 && error.response?.body?.ErrorMessage?.includes('already exists')) {
-      console.log(`📧 Sender already exists in Mailjet: ${email}`);
-      return { Email: email, Status: 'existing' };
-    }
-    
-    console.error('❌ Failed to add sender to Mailjet:', error.response?.body || error.message);
-    throw error;
-  }
-}
-
-async function checkSenderStatus(email) {
-  try {
-    const mailjetApiKey = process.env.MAILJET_API_KEY;
-    const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
-    
-    if (!mailjetApiKey || !mailjetSecretKey) {
-      throw new Error('Mailjet API credentials not configured');
-    }
-    
-    const mailjet = Mailjet.apiConnect(mailjetApiKey, mailjetSecretKey);
-    
-    // Get sender status
-    const request = mailjet
-      .get('sender')
-      .request();
-    
-    const response = await request;
-    const senders = response.body.Data;
-    const sender = senders.find(s => s.Email.toLowerCase() === email.toLowerCase());
-    
-    if (sender) {
-      return {
-        email: sender.Email,
-        status: sender.Status, // 'Active', 'Pending', 'Inactive'
-        isValidated: sender.Status === 'Active'
-      };
-    }
-    
-    return {
-      email: email,
-      status: 'Not Found',
-      isValidated: false
-    };
-    
-  } catch (error) {
-    console.error('❌ Failed to check sender status:', error.response?.body || error.message);
-    return {
-      email: email,
-      status: 'Error',
-      isValidated: false,
-      error: error.message
-    };
-  }
-}
-
 // Real email service using HTTP APIs (works on free hosting)
 async function sendEmailViaHTTP(emailOptions) {
   try {
@@ -116,7 +33,7 @@ async function sendEmailViaHTTP(emailOptions) {
         const mailjet = Mailjet.apiConnect(mailjetApiKey, mailjetSecretKey);
         
         // Parse the from email to extract email and name
-        let fromEmail, fromName, replyToEmail;
+        let fromEmail, fromName;
         if (emailOptions.from.includes('<')) {
           const match = emailOptions.from.match(/^"?([^"<]+)"?\s*<([^>]+)>$/);
           fromName = match ? match[1].trim() : 'Festival Popup';
@@ -126,55 +43,24 @@ async function sendEmailViaHTTP(emailOptions) {
           fromName = 'Festival Popup';
         }
         
-        // 🚀 CHECK IF MERCHANT'S EMAIL IS VALIDATED IN MAILJET
-        try {
-          const senderStatus = await checkSenderStatus(fromEmail);
-          console.log(`📊 Checking sender status for: ${fromEmail}`, senderStatus);
-          
-          if (senderStatus.isValidated) {
-            console.log(`✅ Using merchant's validated email: ${fromEmail}`);
-            replyToEmail = null; // No need for reply-to when using actual sender
-          } else {
-            console.log(`⚠️ Merchant email not validated, using fallback sender`);
-            replyToEmail = fromEmail; // Store original email for reply-to
-            fromEmail = process.env.VERIFIED_SENDER_EMAIL || 'noreply@yourverifieddomain.com';
-            console.log(`📧 Using fallback sender: ${fromEmail}`);
-            console.log(`📧 Merchant email will be in reply-to: ${replyToEmail}`);
-          }
-        } catch (statusError) {
-          console.error('❌ Failed to check sender status, using fallback:', statusError.message);
-          replyToEmail = fromEmail;
-          fromEmail = process.env.VERIFIED_SENDER_EMAIL || 'noreply@yourverifieddomain.com';
-        }
-        
-        console.log('📧 Final email config:', { fromEmail, fromName, replyToEmail });
-        
-        // Build message object
-        const message = {
-          From: {
-            Email: fromEmail,
-            Name: fromName
-          },
-          To: [{
-            Email: emailOptions.to
-          }],
-          Subject: emailOptions.subject,
-          HTMLPart: emailOptions.html,
-          TextPart: emailOptions.text || 'Please enable HTML to view this email.'
-        };
-        
-        // Only add ReplyTo if we're using a fallback sender
-        if (replyToEmail) {
-          message.ReplyTo = {
-            Email: replyToEmail,
-            Name: fromName
-          };
-        }
+        console.log('📧 Preserving merchant email:', fromEmail);
+        console.log('📧 From name:', fromName);
         
         const request = mailjet
           .post('send', { version: 'v3.1' })
           .request({
-            Messages: [message]
+            Messages: [{
+              From: {
+                Email: fromEmail,
+                Name: fromName
+              },
+              To: [{
+                Email: emailOptions.to
+              }],
+              Subject: emailOptions.subject,
+              HTMLPart: emailOptions.html,
+              TextPart: emailOptions.text || 'Please enable HTML to view this email.'
+            }]
           });
         
         const response = await request;
@@ -1665,102 +1551,6 @@ app.get('/api/migration-status', (req, res) => {
       'Same functionality'
     ]
   });
-});
-
-// Check sender validation status in Mailjet
-app.get('/api/sender-status/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    if (!email) {
-      return res.status(400).json({ error: 'Email parameter is required' });
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-    
-    console.log(`📊 Checking sender validation status for: ${email}`);
-    const senderStatus = await checkSenderStatus(email);
-    
-    res.json({
-      success: true,
-      email: senderStatus.email,
-      status: senderStatus.status,
-      isValidated: senderStatus.isValidated,
-      message: senderStatus.isValidated 
-        ? 'Email is validated and ready to send' 
-        : 'Email needs validation - check your inbox for verification email'
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to check sender status:', error.message);
-    res.status(500).json({ 
-      error: 'Failed to check sender status',
-      details: error.message 
-    });
-  }
-});
-
-// Resend verification email for a sender
-app.post('/api/resend-verification/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    const { name } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({ error: 'Email parameter is required' });
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-    
-    console.log(`🔄 Resending verification email to: ${email}`);
-    
-    // First check current status
-    const currentStatus = await checkSenderStatus(email);
-    
-    if (currentStatus.isValidated) {
-      return res.json({
-        success: true,
-        message: 'Email is already validated',
-        status: currentStatus.status
-      });
-    }
-    
-    // Try to add sender (this will send verification email)
-    try {
-      const result = await addSenderToMailjet(email, name);
-      res.json({
-        success: true,
-        message: 'Verification email sent successfully',
-        email: email,
-        result: result
-      });
-    } catch (addError) {
-      if (addError.statusCode === 400 && addError.response?.body?.ErrorMessage?.includes('already exists')) {
-        res.json({
-          success: true,
-          message: 'Sender already exists - verification email was already sent',
-          email: email
-        });
-      } else {
-        throw addError;
-      }
-    }
-    
-  } catch (error) {
-    console.error('❌ Failed to resend verification email:', error.message);
-    res.status(500).json({ 
-      error: 'Failed to resend verification email',
-      details: error.message 
-    });
-  }
 });
 
 // ==================== APP EMBEDS API ENDPOINTS ====================
@@ -5874,28 +5664,6 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
     };
     
     const updatedSettings = await ShopSettings.updateEmailSettings(shopDomain, emailData);
-    
-    // 🚀 AUTO-ADD SENDER TO MAILJET
-    try {
-      console.log(`🚀 Auto-adding sender to Mailjet: ${fromEmail}`);
-      const senderResult = await addSenderToMailjet(fromEmail, fromName);
-      console.log(`✅ Sender added to Mailjet:`, senderResult);
-      
-      // Check initial status
-      const statusResult = await checkSenderStatus(fromEmail);
-      console.log(`📊 Sender status:`, statusResult);
-      
-      if (statusResult.isValidated) {
-        console.log(`🎉 Sender is already validated: ${fromEmail}`);
-      } else {
-        console.log(`📧 Verification email sent to: ${fromEmail}`);
-        console.log(`⏳ Merchant needs to check their email and click the verification link`);
-      }
-      
-    } catch (senderError) {
-      console.error('⚠️ Failed to auto-add sender to Mailjet:', senderError.message);
-      // Don't fail the email configuration if sender addition fails
-    }
     
     // Test the email configuration
     try {

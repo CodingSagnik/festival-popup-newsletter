@@ -915,9 +915,6 @@
                         <button type="button" class="manage-button" onclick="showRegionalPreview()" style="background: #3b82f6;">
                             🗺️ Preview Regional Variations
                         </button>
-                        <a href="/admin" target="_blank" class="manage-button">
-                            ⚙️ Manage All Festivals
-                        </a>
                     </div>
                 </div>
                 <div id="active-festivals-grid" class="festival-grid">
@@ -1338,9 +1335,6 @@
                         </div>
                         <div class="festival-actions">
                             ${status !== 'Expired' ? `
-                                <a href="/admin#festival-${festival._id}" target="_blank" class="btn btn-secondary">
-                                    ✏️ Edit
-                                </a>
                                 <button class="btn btn-danger" onclick="removeFestival('${index}', '${festival.name}')">
                                     🗑️ Remove
                                 </button>

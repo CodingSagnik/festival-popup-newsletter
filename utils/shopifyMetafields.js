@@ -473,6 +473,9 @@ class ShopSettings {
         message: 'Celebrate {{festivalName}} with exclusive deals!'
       }
     };
+    this.analytics = data.analytics || {
+      emailsSent: 0
+    };
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
   }

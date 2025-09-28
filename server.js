@@ -6097,6 +6097,8 @@ Generate the JSON response now:`;
     aiResponse = aiResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
     // Remove model-specific tokens (like Mistral's <s> and </s> tokens)
     aiResponse = aiResponse.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, '');
+    // Fix escaped quotes in HTML content that break JSON parsing
+    aiResponse = aiResponse.replace(/\\"/g, '"').replace(/\\n/g, '').replace(/\\\//g, '/');
     
     console.log('🤖 Raw AI Response (first 300 chars):', aiResponse.substring(0, 300) + '...');
     
@@ -6380,6 +6382,10 @@ app.post('/api/shop-settings/:shopDomain/ai-email/send', async (req, res) => {
     if (successful > 0) {
       try {
         const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+        console.log(`🔍 DEBUG Email Send - Shop Settings:`, shopSettings ? 'EXISTS' : 'NULL');
+        console.log(`🔍 DEBUG Email Send - Analytics Object:`, shopSettings?.analytics ? 'EXISTS' : 'NULL');
+        console.log(`🔍 DEBUG Email Send - Current Count:`, shopSettings?.analytics?.emailsSent || 0);
+        
         if (!shopSettings.analytics) {
           shopSettings.analytics = {};
         }

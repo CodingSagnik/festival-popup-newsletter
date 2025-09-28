@@ -1930,6 +1930,12 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
     const shopSettings = await ShopSettings.getShopSettings(shopDomain);
     const aiEmailsSent = shopSettings?.analytics?.emailsSent || 0;
     
+    // DEBUG: Log email count retrieval
+    console.log(`🔍 DEBUG Analytics - Shop Settings:`, shopSettings ? 'EXISTS' : 'NULL');
+    console.log(`🔍 DEBUG Analytics - Analytics Object:`, shopSettings?.analytics ? 'EXISTS' : 'NULL');
+    console.log(`🔍 DEBUG Analytics - AI Emails Sent:`, aiEmailsSent);
+    console.log(`🔍 DEBUG Analytics - Blog Newsletters:`, sentNewsletters?.length || 0);
+    
     // Calculate total emails sent (blog newsletters + AI emails)
     const totalEmailsSent = (sentNewsletters?.length || 0) + aiEmailsSent;
 
@@ -1952,7 +1958,10 @@ app.get('/api/newsletter/analytics/:shopDomain', async (req, res) => {
     console.log(`✅ Analytics generated for ${shopDomain}:`, {
       total: analytics.totalSubscribers,
       active: analytics.activeSubscribers,
-      festivals: analytics.activeFestivals.length
+      festivals: analytics.activeFestivals.length,
+      aiEmails: analytics.aiEmailsSent,
+      blogEmails: analytics.blogPostsSent,
+      totalEmails: analytics.emailsSent
     });
     
     res.json(analytics);

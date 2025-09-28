@@ -5105,10 +5105,17 @@ app.get('/api/stats', async (req, res) => {
     });
     
     // Get newsletters sent (blog posts that have been sent)
-    const newslettersSent = await BlogPost.countDocuments({ 
+    const blogNewslettersSent = await BlogPost.countDocuments({ 
       shopDomain,
       sentNewsletter: true 
     });
+    
+    // Get AI emails sent count from shop settings
+    const shopSettings = await ShopSettings.getShopSettings(shopDomain);
+    const aiEmailsSent = shopSettings?.analytics?.emailsSent || 0;
+    
+    // Calculate total emails sent (blog newsletters + AI emails)
+    const totalEmailsSent = blogNewslettersSent + aiEmailsSent;
     
     // Get new subscribers this month
     const startOfMonth = new Date();
@@ -5127,7 +5134,9 @@ app.get('/api/stats', async (req, res) => {
         totalSubscribers,
         festivalSubscribers,
         blogSubscribers,
-        newslettersSent,
+        newslettersSent: totalEmailsSent, // Now includes both blog newsletters and AI emails
+        blogNewslettersSent, // Separate count for blog newsletters only
+        aiEmailsSent, // Separate count for AI emails only
         newThisMonth
       }
     });

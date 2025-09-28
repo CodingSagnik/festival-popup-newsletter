@@ -343,12 +343,8 @@
                         <strong>🚀 Powered by Mailjet</strong>
                         <br>✅ 200 emails/day forever free
                         <br>✅ Professional email delivery
-                        <br>✅ Automatic sender validation - you'll receive verification email directly
-                        <br>✅ No manual setup required
+                        <br>✅ No setup complexity - just enter your email details below
                     </div>
-                    
-                    <!-- Validation Status Display -->
-                    <div id="validation-status" style="display: none; margin-bottom: 20px;"></div>
 
                     <div class="form-row">
                         <div class="form-col">
@@ -607,23 +603,12 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Handle validation information
-                    if (data.validation) {
-                        showValidationStatus(data.validation);
-                        showAlert(data.message, data.validation.validationRequired ? 'warning' : 'success');
-                    } else {
-                        showAlert(data.message || 'Email settings saved successfully!', 'success');
-                    }
-                    
+                    showAlert('Email settings saved successfully!', 'success');
                     emailConfigured = true;
                     updateEmailStatus(true, data.settings.emailSettings);
                     document.getElementById('test-email-btn').disabled = false;
                     document.getElementById('disable-email-btn').style.display = 'inline-block';
                     
-                    // If validation is required, check status periodically
-                    if (data.validation && data.validation.validationRequired) {
-                        startValidationStatusCheck(data.settings.emailSettings.fromEmail);
-                    }
 
                 } else {
                     showAlert(data.error || 'Failed to save email settings', 'error');
@@ -777,97 +762,6 @@
         
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-        
-        function showValidationStatus(validation) {
-            const statusDiv = document.getElementById('validation-status');
-            
-            if (!validation) {
-                statusDiv.style.display = 'none';
-                return;
-            }
-            
-            let statusClass = 'alert-info';
-            let statusIcon = '📧';
-            
-            switch (validation.status) {
-                case 'validation_sent':
-                case 'validation_resent':
-                    statusClass = 'alert-warning';
-                    statusIcon = '📨';
-                    break;
-                case 'already_verified':
-                    statusClass = 'alert-success';
-                    statusIcon = '✅';
-                    break;
-                case 'already_exists':
-                    statusClass = 'alert-warning';
-                    statusIcon = '📨';
-                    break;
-                case 'verified':
-                    statusClass = 'alert-success';
-                    statusIcon = '🎉';
-                    break;
-                default:
-                    statusClass = 'alert-info';
-            }
-            
-            statusDiv.className = `alert ${statusClass}`;
-            statusDiv.innerHTML = `
-                <strong>${statusIcon} Email Validation Status</strong><br>
-                ${validation.message}
-                ${validation.validationRequired ? '<br><small>💡 <strong>Tip:</strong> Check your email inbox and spam folder for the verification email from Mailjet.</small>' : ''}
-            `;
-            statusDiv.style.display = 'block';
-        }
-        
-        let validationCheckInterval = null;
-        
-        function startValidationStatusCheck(email) {
-            // Clear any existing interval
-            if (validationCheckInterval) {
-                clearInterval(validationCheckInterval);
-            }
-            
-            // Check validation status every 10 seconds for up to 5 minutes
-            let attempts = 0;
-            const maxAttempts = 30; // 30 attempts * 10 seconds = 5 minutes
-            
-            validationCheckInterval = setInterval(async () => {
-                attempts++;
-                
-                try {
-                    const response = await fetch(`/api/mailjet/sender-status/${encodeURIComponent(email)}`);
-                    const data = await response.json();
-                    
-                    if (data.success && data.isActive) {
-                        // Email is now verified!
-                        showValidationStatus({
-                            status: 'verified',
-                            message: 'Great! Your email has been verified and is ready to send newsletters.',
-                            validationRequired: false
-                        });
-                        showAlert('🎉 Email verification successful! You can now send newsletters.', 'success');
-                        clearInterval(validationCheckInterval);
-                        validationCheckInterval = null;
-                    } else if (attempts >= maxAttempts) {
-                        // Stop checking after max attempts
-                        showValidationStatus({
-                            status: 'timeout',
-                            message: 'Still waiting for email verification. Please check your email and click the verification link.',
-                            validationRequired: true
-                        });
-                        clearInterval(validationCheckInterval);
-                        validationCheckInterval = null;
-                    }
-                } catch (error) {
-                    console.error('Error checking validation status:', error);
-                    if (attempts >= maxAttempts) {
-                        clearInterval(validationCheckInterval);
-                        validationCheckInterval = null;
-                    }
-                }
-            }, 10000); // Check every 10 seconds
         }
         
         // AI Email Generator Functions

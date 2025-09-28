@@ -7,6 +7,129 @@ const nodemailer = require('nodemailer');
 // Import Mailjet SDK
 const Mailjet = require('node-mailjet');
 
+/**
+ * Automatically add and validate sender email in Mailjet
+ * @param {string} senderEmail - The email address to validate
+ * @param {string} senderName - The name associated with the email
+ * @returns {Promise<Object>} - Validation result
+ */
+async function addMailjetSender(senderEmail, senderName) {
+  try {
+    const mailjetApiKey = process.env.MAILJET_API_KEY;
+    const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
+    
+    if (!mailjetApiKey || !mailjetSecretKey || 
+        mailjetApiKey === 'your_mailjet_api_key_here' || 
+        mailjetSecretKey === 'your_mailjet_secret_key_here') {
+      throw new Error('Mailjet API keys not configured');
+    }
+    
+    console.log(`📧 Adding sender to Mailjet: ${senderEmail}`);
+    
+    // Initialize Mailjet client
+    const mailjet = Mailjet.apiConnect(mailjetApiKey, mailjetSecretKey);
+    
+    // Check if sender already exists
+    try {
+      const existingResponse = await mailjet
+        .get('sender')
+        .request();
+      
+      const existingSender = existingResponse.body.Data.find(
+        sender => sender.Email.toLowerCase() === senderEmail.toLowerCase()
+      );
+      
+      if (existingSender) {
+        console.log(`📧 Sender already exists with status: ${existingSender.Status}`);
+        
+        if (existingSender.Status === 'Active') {
+          return {
+            success: true,
+            status: 'already_verified',
+            message: 'Sender email is already verified and active'
+          };
+        } else if (existingSender.Status === 'Unconfirmed') {
+          // Resend validation email
+          try {
+            await mailjet
+              .post('sender')
+              .id(existingSender.ID)
+              .action('validate')
+              .request();
+            
+            return {
+              success: true,
+              status: 'validation_resent',
+              message: 'Validation email has been resent. Please check your inbox and click the verification link.',
+              validationRequired: true
+            };
+          } catch (resendError) {
+            console.error('Failed to resend validation:', resendError);
+            return {
+              success: false,
+              status: 'resend_failed',
+              message: 'Failed to resend validation email. Please contact support.',
+              error: resendError.message
+            };
+          }
+        }
+      }
+    } catch (checkError) {
+      console.log('Could not check existing senders, proceeding to add new sender');
+    }
+    
+    // Add new sender
+    const addSenderResponse = await mailjet
+      .post('sender')
+      .request({
+        Email: senderEmail,
+        Name: senderName || senderEmail.split('@')[0]
+      });
+    
+    console.log('✅ Sender added to Mailjet successfully');
+    console.log('📧 Validation email will be sent automatically to:', senderEmail);
+    
+    return {
+      success: true,
+      status: 'validation_sent',
+      message: 'Validation email has been sent to your email address. Please check your inbox and click the verification link to complete setup.',
+      validationRequired: true,
+      senderData: addSenderResponse.body.Data[0]
+    };
+    
+  } catch (error) {
+    console.error('❌ Failed to add Mailjet sender:', error.response?.data || error.message);
+    
+    // Handle specific Mailjet errors
+    if (error.response?.data?.ErrorMessage) {
+      const errorMsg = error.response.data.ErrorMessage;
+      
+      if (errorMsg.includes('already exists')) {
+        return {
+          success: true,
+          status: 'already_exists',
+          message: 'This email address is already registered. Check your email for validation instructions.',
+          validationRequired: true
+        };
+      } else if (errorMsg.includes('invalid email')) {
+        return {
+          success: false,
+          status: 'invalid_email',
+          message: 'Please enter a valid email address.',
+          error: errorMsg
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      status: 'api_error',
+      message: 'Failed to register sender email. Please try again or contact support.',
+      error: error.message
+    };
+  }
+}
+
 // Real email service using HTTP APIs (works on free hosting)
 async function sendEmailViaHTTP(emailOptions) {
   try {
@@ -5609,6 +5732,117 @@ app.get('/api/shop-settings/:shopDomain/email', async (req, res) => {
   }
 });
 
+// Add Mailjet sender validation endpoint
+app.post('/api/mailjet/validate-sender', async (req, res) => {
+  try {
+    const { fromEmail, fromName } = req.body;
+    
+    if (!fromEmail) {
+      return res.status(400).json({ 
+        error: 'Email address is required',
+        validationRequired: false
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(fromEmail)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format',
+        validationRequired: false
+      });
+    }
+    
+    console.log(`📧 Validating sender via Mailjet API: ${fromEmail}`);
+    
+    // Add sender to Mailjet and trigger validation
+    const validationResult = await addMailjetSender(fromEmail, fromName);
+    
+    if (validationResult.success) {
+      res.json({
+        success: true,
+        status: validationResult.status,
+        message: validationResult.message,
+        validationRequired: validationResult.validationRequired || false,
+        senderData: validationResult.senderData
+      });
+    } else {
+      res.status(400).json({
+        error: validationResult.message,
+        status: validationResult.status,
+        validationRequired: validationResult.validationRequired || false,
+        details: validationResult.error
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Sender validation endpoint error:', error);
+    res.status(500).json({ 
+      error: 'Failed to validate sender email',
+      details: error.message,
+      validationRequired: false
+    });
+  }
+});
+
+// Check Mailjet sender status endpoint
+app.get('/api/mailjet/sender-status/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    const mailjetApiKey = process.env.MAILJET_API_KEY;
+    const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
+    
+    if (!mailjetApiKey || !mailjetSecretKey) {
+      return res.status(400).json({ 
+        error: 'Mailjet API keys not configured',
+        status: 'not_configured'
+      });
+    }
+    
+    const mailjet = Mailjet.apiConnect(mailjetApiKey, mailjetSecretKey);
+    
+    const response = await mailjet
+      .get('sender')
+      .request();
+    
+    const sender = response.body.Data.find(
+      s => s.Email.toLowerCase() === email.toLowerCase()
+    );
+    
+    if (sender) {
+      res.json({
+        success: true,
+        status: sender.Status.toLowerCase(),
+        isActive: sender.Status === 'Active',
+        needsValidation: sender.Status === 'Unconfirmed',
+        senderData: {
+          id: sender.ID,
+          email: sender.Email,
+          name: sender.Name,
+          status: sender.Status,
+          createdAt: sender.CreatedAt
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        status: 'not_found',
+        isActive: false,
+        needsValidation: true,
+        message: 'Sender not found in Mailjet'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to check sender status:', error);
+    res.status(500).json({ 
+      error: 'Failed to check sender status',
+      details: error.message 
+    });
+  }
+});
+
 // Update shop email settings
 app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
   try {
@@ -5619,9 +5853,16 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
       return res.status(400).json({ error: 'Shop domain is required' });
     }
     
-    if (!fromEmail || !fromName || !password) {
+    if (!fromEmail || !fromName) {
       return res.status(400).json({ 
-        error: 'Email, display name, and password are required' 
+        error: 'Email and display name are required' 
+      });
+    }
+    
+    // For Mailjet, password is not required as we use app-level API keys
+    if (provider !== 'mailjet' && !password) {
+      return res.status(400).json({ 
+        error: 'Password is required for this email provider' 
       });
     }
     
@@ -5632,8 +5873,8 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
     }
     
     // Validate provider
-    const validProviders = ['gmail', 'outlook', 'yahoo', 'custom'];
-    const selectedProvider = provider || 'gmail';
+    const validProviders = ['gmail', 'outlook', 'yahoo', 'custom', 'mailjet'];
+    const selectedProvider = provider || 'mailjet';
     if (!validProviders.includes(selectedProvider)) {
       return res.status(400).json({ error: 'Invalid email provider' });
     }
@@ -5653,10 +5894,24 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
     
     console.log(`📧 Updating email settings for shop: ${shopDomain}`);
     
+    // For Mailjet provider, automatically validate sender
+    let validationResult = null;
+    if (selectedProvider === 'mailjet') {
+      console.log(`📧 Automatically validating Mailjet sender: ${fromEmail}`);
+      try {
+        validationResult = await addMailjetSender(fromEmail, fromName);
+        console.log(`📧 Validation result:`, validationResult);
+      } catch (validationError) {
+        console.error('⚠️ Sender validation failed, but continuing with settings save:', validationError.message);
+        // Don't fail the entire operation if validation fails
+        // The user can manually validate later
+      }
+    }
+    
     const emailData = {
       fromEmail,
       fromName,
-      password,
+      password: password || 'mailjet-app-level',
       provider: selectedProvider,
       smtpHost,
       smtpPort,
@@ -5693,11 +5948,30 @@ app.post('/api/shop-settings/:shopDomain/email', async (req, res) => {
       updatedAt: updatedSettings.updatedAt
     };
     
-    res.json({ 
-      success: true, 
+    // Prepare response with validation information
+    const response = {
+      success: true,
       message: 'Email settings updated successfully',
       settings: safeSettings
-    });
+    };
+    
+    // Include validation information if available
+    if (validationResult) {
+      response.validation = {
+        status: validationResult.status,
+        message: validationResult.message,
+        validationRequired: validationResult.validationRequired || false
+      };
+      
+      // Update message based on validation result
+      if (validationResult.validationRequired) {
+        response.message = 'Email settings saved! ' + validationResult.message;
+      } else if (validationResult.status === 'already_verified') {
+        response.message = 'Email settings saved! Your sender email is already verified and ready to use.';
+      }
+    }
+    
+    res.json(response);
     
   } catch (error) {
     console.error('❌ Error updating shop email settings:', error);

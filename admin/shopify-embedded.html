@@ -1597,7 +1597,17 @@
                 });
 
                 if (response.success) {
-                    showEmailMessage('Email settings saved successfully!', 'success');
+                    // Handle validation information
+                    if (response.validation) {
+                        if (response.validation.validationRequired) {
+                            showEmailMessage(response.message + ' Please check your email for verification.', 'warning');
+                        } else {
+                            showEmailMessage(response.message, 'success');
+                        }
+                    } else {
+                        showEmailMessage(response.message || 'Email settings saved successfully!', 'success');
+                    }
+                    
                     // Reload the configuration to show updated status
                     setTimeout(() => loadEmailConfiguration(), 1000);
                 } else {

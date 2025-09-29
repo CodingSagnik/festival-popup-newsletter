@@ -268,6 +268,12 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
+// Mailjet domain validation route - serves validation file at root
+app.get('/8d648f1b39506e28cdbf0264e36fd1dd.txt', (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  res.send(''); // Empty file as required by Mailjet
+});
+
 // Handle preflight OPTIONS requests
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');

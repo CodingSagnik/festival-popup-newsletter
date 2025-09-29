@@ -999,9 +999,6 @@
             <div class="festivals-section">
                 <div class="section-header">
                     <h2 class="section-title">📧 Email Configuration</h2>
-                    <a href="/admin/email-settings.html" target="_blank" class="manage-button" id="advanced-settings-link">
-                        ⚙️ Advanced Settings
-                    </a>
                 </div>
                 <div id="email-config-section">
                     <!-- Email configuration will be inserted here -->
@@ -1496,13 +1493,6 @@
                         </div>
                     `}
 
-                    <!-- Simplified Email Configuration - Mailjet Only -->
-                    <div style="background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 20px;">🚀</span>
-                            <strong style="color: #1976d2;">Powered by Mailjet</strong>
-                        </div>
-                    </div>
 
                     <form class="email-form" onsubmit="saveEmailSettings(event)">
                         <div class="form-row">
@@ -1534,6 +1524,11 @@
                                     🚫 Remove Email
                                 </button>
                             ` : ''}
+                        </div>
+                        <div style="margin-top: 16px; text-align: center;">
+                            <a href="/admin/email-settings.html" target="_blank" style="color: #666; text-decoration: underline; font-size: 14px;">
+                                For advanced settings click here
+                            </a>
                         </div>
                     </form>
 

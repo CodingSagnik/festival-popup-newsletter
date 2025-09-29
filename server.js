@@ -265,14 +265,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'Accept', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With']
 }));
 app.use(express.json());
+
+// Mailjet domain validation route - MUST be before express.static to ensure it's hit first
+app.get('/8d648f1b39506e28cdbf0264e36fd1dd.txt', (req, res) => {
+  console.log('✅ Mailjet validation file requested');
+  res.set('Content-Type', 'text/plain');
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.status(200).send(''); // Empty file as required by Mailjet
+});
+
+// Serve static files from public directory
 app.use(express.static('public'));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
-
-// Mailjet domain validation route - serves validation file at root
-app.get('/8d648f1b39506e28cdbf0264e36fd1dd.txt', (req, res) => {
-  res.set('Content-Type', 'text/plain');
-  res.send(''); // Empty file as required by Mailjet
-});
 
 // Handle preflight OPTIONS requests
 app.options('*', (req, res) => {
@@ -379,6 +385,22 @@ app.get('/', (req, res) => {
       version: '1.0.0'
     });
   }
+});
+
+// Test Mailjet validation file accessibility
+app.get('/test-mailjet-file', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const filePath = path.join(__dirname, 'public', '8d648f1b39506e28cdbf0264e36fd1dd.txt');
+  
+  res.json({
+    status: 'OK',
+    message: 'Mailjet validation file test',
+    fileExists: fs.existsSync(filePath),
+    filePath: filePath,
+    validationUrl: `${req.protocol}://${req.get('host')}/8d648f1b39506e28cdbf0264e36fd1dd.txt`,
+    instructions: 'Visit the validationUrl to test if Mailjet can access the file'
+  });
 });
 
 // Health check endpoint for Railway (backup)
@@ -5274,34 +5296,8 @@ app.get('/auth/callback', (req, res) => {
   res.redirect(`/?shop=${shop}&host=${host}`);
 });
 
-// Default route - serve admin interface for Shopify embedded app
-app.get('/', (req, res) => {
-  // Check if this is a Shopify embedded app request
-  const userAgent = req.get('User-Agent') || '';
-  const isShopifyRequest = req.query.shop || req.query.embedded || userAgent.includes('Shopify');
-  
-  if (isShopifyRequest) {
-    // Set headers for embedded app
-    res.setHeader('Content-Security-Policy', "frame-ancestors https://*.shopify.com https://admin.shopify.com;");
-    res.setHeader('X-Frame-Options', 'ALLOWALL');
-    
-    // Serve the embedded admin interface
-    res.sendFile(path.join(__dirname, 'admin', 'shopify-embedded.html'));
-  } else {
-    // Serve API info for direct access
-  res.json({ 
-    message: 'Festival Popup & Newsletter Extension API',
-    version: '1.0.0',
-    endpoints: {
-      admin: '/admin',
-      health: '/health',
-      popup: '/api/popup/:shopDomain',
-      newsletter: '/api/newsletter/*',
-      analytics: '/api/newsletter/analytics/:shopDomain'
-    }
-  });
-  }
-});
+// Note: Root route already defined earlier in the file (line 366)
+// Removed duplicate route to avoid conflicts
 
 // Scheduled task to check for newly active festivals (runs every hour)
 async function checkForNewlyActiveFestivals() {

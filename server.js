@@ -268,11 +268,14 @@ app.use(express.json());
 
 // Mailjet domain validation route - MUST be before express.static to ensure it's hit first
 app.get('/8d648f1b39506e28cdbf0264e36fd1dd.txt', (req, res) => {
-  console.log('✅ Mailjet validation file requested');
+  console.log('✅ Mailjet validation file requested from:', req.get('User-Agent') || 'Unknown');
+  console.log('✅ Request IP:', req.ip || req.connection.remoteAddress);
   res.set('Content-Type', 'text/plain');
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET');
   res.status(200).send(''); // Empty file as required by Mailjet
 });
 

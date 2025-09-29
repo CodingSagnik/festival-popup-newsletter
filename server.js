@@ -33,18 +33,23 @@ async function sendEmailViaHTTP(emailOptions) {
         const mailjet = Mailjet.apiConnect(mailjetApiKey, mailjetSecretKey);
         
         // Parse the from email to extract email and name
-        let fromEmail, fromName;
+        let fromEmail, fromName, replyToEmail;
         if (emailOptions.from.includes('<')) {
           const match = emailOptions.from.match(/^"?([^"<]+)"?\s*<([^>]+)>$/);
           fromName = match ? match[1].trim() : 'Festival Popup';
-          fromEmail = match ? match[2] : emailOptions.from;
+          replyToEmail = match ? match[2] : emailOptions.from; // Original merchant email for reply-to
         } else {
-          fromEmail = emailOptions.from;
           fromName = 'Festival Popup';
+          replyToEmail = emailOptions.from; // Original merchant email for reply-to
         }
         
-        console.log('📧 Preserving merchant email:', fromEmail);
+        // Use app domain for sending (replace with your verified domain)
+        const appDomain = process.env.APP_EMAIL_DOMAIN || 'your-app-domain.com';
+        fromEmail = `noreply@${appDomain}`;
+        
+        console.log('📧 Using app domain for FROM:', fromEmail);
         console.log('📧 From name:', fromName);
+        console.log('📧 Reply-to (merchant email):', replyToEmail);
         
         const request = mailjet
           .post('send', { version: 'v3.1' })
@@ -57,6 +62,10 @@ async function sendEmailViaHTTP(emailOptions) {
               To: [{
                 Email: emailOptions.to
               }],
+              ReplyTo: {
+                Email: replyToEmail,
+                Name: fromName
+              },
               Subject: emailOptions.subject,
               HTMLPart: emailOptions.html,
               TextPart: emailOptions.text || 'Please enable HTML to view this email.'

@@ -134,9 +134,11 @@ Created a perfect storm where Mailjet couldn't access the validation file.
 Your Render environment variables are correctly set:
 ```
 APP_EMAIL_DOMAIN=festival-popup-newsletter.onrender.com
-MAILJET_API_KEY=f2ff3a7521b7486fd3308cee9f7db03c
-MAILJET_SECRET_KEY=322a6c350f5d78ca00bf4d6b0884990a
+MAILJET_API_KEY=***HIDDEN_FOR_SECURITY***
+MAILJET_SECRET_KEY=***HIDDEN_FOR_SECURITY***
 ```
+
+⚠️ **SECURITY NOTE**: API keys have been hidden for security. The original keys were accidentally exposed and need to be regenerated.
 
 ✅ No changes needed to environment variables.
 

@@ -1,26 +1,22 @@
-const axios = require('axios');
-const shopifyAuth = require('./shopifyAuth');
 const fs = require('fs').promises;
 const path = require('path');
 
 /**
- * REAL SHOPIFY METAFIELDS DATABASE
- * Uses Shopify Admin API for permanent storage in Shopify's database!
- * Data persists forever - no more resets on server restart!
- * Falls back to file storage ONLY for development/testing
+ * Shopify-Compatible Database Replacement
+ * Drop-in replacement for MongoDB operations using file-based storage
+ * Maintains exact same data structure and API compatibility
+ * No special Shopify permissions required!
  */
 
 class ShopifyMetafieldsDB {
   constructor() {
     this.namespace = 'festival_popup';
-    // Backup directory for development fallback only
     this.dataDir = path.join(process.cwd(), 'data', 'shops');
     this.ensureDataDir();
-    this.apiVersion = '2024-01';
   }
 
   /**
-   * Ensure backup data directory exists (for development fallback only)
+   * Ensure data directory exists
    */
   async ensureDataDir() {
     try {
@@ -31,253 +27,122 @@ class ShopifyMetafieldsDB {
   }
 
   /**
-   * Get Shopify Admin API URL for shop
+   * Get file path for shop data
    */
-  getAdminApiUrl(shopDomain) {
-    return `https://${shopDomain}/admin/api/${this.apiVersion}`;
-  }
-
-  /**
-   * Get metafield by key using REAL Shopify API ✅
-   */
-  async getMetafield(shopDomain, key) {
-    try {
-      const accessToken = shopifyAuth.getAccessToken(shopDomain);
-      
-      if (!accessToken) {
-        console.warn(`⚠️ No access token for ${shopDomain}, using file storage`);
-        return await this.getMetafieldFromFile(shopDomain, key);
-      }
-
-      // Use Shopify Admin REST API to get metafields
-      const apiUrl = `${this.getAdminApiUrl(shopDomain)}/metafields.json`;
-      
-      const response = await axios.get(apiUrl, {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          namespace: this.namespace,
-          key: key
-        }
-      });
-
-      if (response.data && response.data.metafields && response.data.metafields.length > 0) {
-        const metafield = response.data.metafields[0];
-        console.log(`✅ SHOPIFY DB: Retrieved ${key} for ${shopDomain}`);
-        return JSON.parse(metafield.value);
-      }
-
-      console.log(`ℹ️  No metafield ${key} in Shopify for ${shopDomain}`);
-      return null;
-    } catch (error) {
-      console.error(`❌ Error getting ${key} from Shopify:`, error.message);
-      // Fall back to file storage on error
-      return await this.getMetafieldFromFile(shopDomain, key);
-    }
-  }
-
-  /**
-   * Set metafield value using REAL Shopify API ✅
-   */
-  async setMetafield(shopDomain, key, value, type = 'json') {
-    try {
-      const accessToken = shopifyAuth.getAccessToken(shopDomain);
-      
-      if (!accessToken) {
-        console.warn(`⚠️ No access token for ${shopDomain}, saving to file storage`);
-        return await this.setMetafieldToFile(shopDomain, key, value);
-      }
-
-      // Check if metafield already exists
-      const existingMetafieldId = await this.getExistingMetafieldId(shopDomain, key, accessToken);
-
-      const apiUrl = `${this.getAdminApiUrl(shopDomain)}/metafields${existingMetafieldId ? `/${existingMetafieldId}.json` : '.json'}`;
-      const method = existingMetafieldId ? 'PUT' : 'POST';
-
-      const metafieldData = {
-        metafield: {
-          namespace: this.namespace,
-          key: key,
-          value: JSON.stringify(value),
-          type: 'json'
-        }
-      };
-
-      const response = await axios({
-        method: method,
-        url: apiUrl,
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json'
-        },
-        data: metafieldData
-      });
-
-      console.log(`✅ SHOPIFY DB: Saved ${key} for ${shopDomain} permanently!`);
-      
-      // Also save to file as backup
-      await this.setMetafieldToFile(shopDomain, key, value);
-
-      return response.data.metafield;
-    } catch (error) {
-      console.error(`❌ Error saving ${key} to Shopify:`, error.response?.data || error.message);
-      // Fall back to file storage on error
-      return await this.setMetafieldToFile(shopDomain, key, value);
-    }
-  }
-
-  /**
-   * Get existing metafield ID (needed for updates)
-   */
-  async getExistingMetafieldId(shopDomain, key, accessToken) {
-    try {
-      const apiUrl = `${this.getAdminApiUrl(shopDomain)}/metafields.json`;
-      
-      const response = await axios.get(apiUrl, {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          namespace: this.namespace,
-          key: key
-        }
-      });
-
-      if (response.data && response.data.metafields && response.data.metafields.length > 0) {
-        return response.data.metafields[0].id;
-      }
-
-      return null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
-   * Update existing metafield (uses set metafield)
-   */
-  async updateMetafield(shopDomain, key, value) {
-    return await this.setMetafield(shopDomain, key, value);
-  }
-
-  /**
-   * Delete metafield using REAL Shopify API ✅
-   */
-  async deleteMetafield(shopDomain, key) {
-    try {
-      const accessToken = shopifyAuth.getAccessToken(shopDomain);
-      
-      if (!accessToken) {
-        console.warn(`⚠️ No access token for ${shopDomain}, deleting from file storage`);
-        return await this.deleteMetafieldFromFile(shopDomain, key);
-      }
-
-      const metafieldId = await this.getExistingMetafieldId(shopDomain, key, accessToken);
-      
-      if (metafieldId) {
-        const apiUrl = `${this.getAdminApiUrl(shopDomain)}/metafields/${metafieldId}.json`;
-        
-        await axios.delete(apiUrl, {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log(`✅ SHOPIFY DB: Deleted ${key} for ${shopDomain}`);
-      }
-
-      // Also delete from file backup
-      await this.deleteMetafieldFromFile(shopDomain, key);
-
-      return true;
-    } catch (error) {
-      console.error(`❌ Error deleting ${key} from Shopify:`, error.message);
-      return await this.deleteMetafieldFromFile(shopDomain, key);
-    }
-  }
-
-  /**
-   * Get all metafields for a shop from REAL Shopify API ✅
-   */
-  async getAllMetafields(shopDomain) {
-    try {
-      const accessToken = shopifyAuth.getAccessToken(shopDomain);
-      
-      if (!accessToken) {
-        console.warn(`⚠️ No access token for ${shopDomain}`);
-        return [];
-      }
-
-      const apiUrl = `${this.getAdminApiUrl(shopDomain)}/metafields.json`;
-      
-      const response = await axios.get(apiUrl, {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          namespace: this.namespace
-        }
-      });
-
-      return response.data.metafields || [];
-    } catch (error) {
-      console.error(`Error getting all metafields for ${shopDomain}:`, error.message);
-      return [];
-    }
-  }
-
-  // ===== FILE-BASED FALLBACK METHODS (for development/backup only) =====
-
   getShopDataPath(shopDomain, key) {
     const safeShopDomain = shopDomain.replace(/[^a-zA-Z0-9.-]/g, '_');
     return path.join(this.dataDir, `${safeShopDomain}_${key}.json`);
   }
 
-  async getMetafieldFromFile(shopDomain, key) {
+  /**
+   * Get metafield by key (file-based storage)
+   */
+  async getMetafield(shopDomain, key) {
     try {
       const filePath = this.getShopDataPath(shopDomain, key);
-      const data = await fs.readFile(filePath, 'utf8');
-      console.log(`📁 File backup: Retrieved ${key} for ${shopDomain}`);
-      return JSON.parse(data);
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        return null;
+      
+      try {
+        const data = await fs.readFile(filePath, 'utf8');
+        return JSON.parse(data);
+      } catch (readError) {
+        if (readError.code === 'ENOENT') {
+          // File doesn't exist, return null
+          return null;
+        }
+        throw readError;
       }
-      console.error(`Error reading file ${key}:`, error.message);
+    } catch (error) {
+      console.error(`Error getting metafield ${key} for ${shopDomain}:`, error.message);
       return null;
     }
   }
 
-  async setMetafieldToFile(shopDomain, key, value) {
+  /**
+   * Set metafield value (file-based storage)
+   */
+  async setMetafield(shopDomain, key, value, type = 'json') {
     try {
       await this.ensureDataDir();
       const filePath = this.getShopDataPath(shopDomain, key);
+      
       await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf8');
-      console.log(`📁 File backup: Saved ${key} for ${shopDomain}`);
-      return { success: true };
+      
+      return {
+        namespace: this.namespace,
+        key: key,
+        value: JSON.stringify(value),
+        type: type
+      };
     } catch (error) {
-      console.error(`Error writing file ${key}:`, error.message);
+      console.error(`Error setting metafield ${key} for ${shopDomain}:`, error.message);
       throw error;
     }
   }
 
-  async deleteMetafieldFromFile(shopDomain, key) {
+  /**
+   * Update existing metafield (file-based storage)
+   */
+  async updateMetafield(shopDomain, key, value) {
+    try {
+      // For file-based storage, update is the same as set
+      return await this.setMetafield(shopDomain, key, value);
+    } catch (error) {
+      console.error(`Error updating metafield ${key} for ${shopDomain}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete metafield (file-based storage)
+   */
+  async deleteMetafield(shopDomain, key) {
     try {
       const filePath = this.getShopDataPath(shopDomain, key);
-      await fs.unlink(filePath);
-      console.log(`📁 File backup: Deleted ${key} for ${shopDomain}`);
-      return true;
-    } catch (error) {
-      if (error.code === 'ENOENT') {
+      
+      try {
+        await fs.unlink(filePath);
         return true;
+      } catch (deleteError) {
+        if (deleteError.code === 'ENOENT') {
+          // File doesn't exist, consider it already deleted
+          return true;
+        }
+        throw deleteError;
       }
-      console.error(`Error deleting file ${key}:`, error.message);
-      return false;
+    } catch (error) {
+      console.error(`Error deleting metafield ${key} for ${shopDomain}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all metafields for a shop (file-based storage)
+   */
+  async getAllMetafields(shopDomain) {
+    try {
+      await this.ensureDataDir();
+      const safeShopDomain = shopDomain.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const files = await fs.readdir(this.dataDir);
+      
+      const metafields = {};
+      const shopFiles = files.filter(file => file.startsWith(`${safeShopDomain}_`) && file.endsWith('.json'));
+      
+      for (const file of shopFiles) {
+        const key = file.replace(`${safeShopDomain}_`, '').replace('.json', '');
+        const filePath = path.join(this.dataDir, file);
+        
+        try {
+          const data = await fs.readFile(filePath, 'utf8');
+          metafields[key] = JSON.parse(data);
+        } catch (readError) {
+          console.error(`Error reading file ${file}:`, readError.message);
+        }
+      }
+      
+      return metafields;
+    } catch (error) {
+      console.error(`Error getting all metafields for ${shopDomain}:`, error.message);
+      return {};
     }
   }
 }

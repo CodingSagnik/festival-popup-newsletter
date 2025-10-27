@@ -5139,11 +5139,17 @@ app.get('/api/newsletter/subscribers/:shopDomain', async (req, res) => {
     console.log(`📋 Fetching subscriber list for: ${shopDomain}`);
     
     // Get all subscribers with details
-    const subscribers = await NewsletterSubscriber.find({ shopDomain })
-      .sort({ subscribedAt: -1 }); // Sort by newest first
+    const subscribers = await NewsletterSubscriber.find({ shopDomain });
+    
+    // Sort by newest first (manual sort since file-based storage returns plain array)
+    const sortedSubscribers = subscribers.sort((a, b) => {
+      const dateA = new Date(a.subscribedAt);
+      const dateB = new Date(b.subscribedAt);
+      return dateB - dateA; // Newest first
+    });
     
     // Format the subscriber data
-    const formattedSubscribers = subscribers.map(sub => ({
+    const formattedSubscribers = sortedSubscribers.map(sub => ({
       email: sub.email,
       subscriptionType: sub.subscriptionType || 'festival',
       subscribedAt: sub.subscribedAt,

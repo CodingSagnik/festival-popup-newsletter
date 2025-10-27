@@ -5129,6 +5129,44 @@ app.get('/api/subscribers', async (req, res) => {
   }
 });
 
+// Get all subscribers list for admin panel
+app.get('/api/newsletter/subscribers/:shopDomain', async (req, res) => {
+  try {
+    const { shopDomain } = req.params;
+    console.log(`📋 Fetching subscriber list for: ${shopDomain}`);
+    
+    // Get all subscribers with details
+    const subscribers = await NewsletterSubscriber.find({ shopDomain })
+      .sort({ subscribedAt: -1 }); // Sort by newest first
+    
+    // Format the subscriber data
+    const formattedSubscribers = subscribers.map(sub => ({
+      email: sub.email,
+      subscriptionType: sub.subscriptionType || 'festival',
+      subscribedAt: sub.subscribedAt,
+      isActive: sub.isActive,
+      preferences: sub.preferences || {}
+    }));
+    
+    console.log(`✅ Found ${formattedSubscribers.length} subscribers for ${shopDomain}`);
+    
+    res.json({
+      success: true,
+      subscribers: formattedSubscribers,
+      total: formattedSubscribers.length,
+      active: formattedSubscribers.filter(s => s.isActive).length,
+      inactive: formattedSubscribers.filter(s => !s.isActive).length
+    });
+  } catch (error) {
+    console.error('❌ Error fetching subscribers:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      subscribers: []
+    });
+  }
+});
+
 app.get('/api/stats', async (req, res) => {
   try {
     const shopDomain = req.query.shopDomain || 'test-festival-popup.myshopify.com';

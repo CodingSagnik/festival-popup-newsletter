@@ -373,6 +373,7 @@
             <button class="tab-btn" onclick="switchTab('popup-settings')">Popup Settings</button>
             <button class="tab-btn" onclick="switchTab('newsletter')">Newsletter</button>
             <button class="tab-btn" onclick="window.open('email-settings.html?shop=' + SHOP_DOMAIN, '_blank')">📧 Email Settings</button>
+            <button class="tab-btn" onclick="switchTab('subscribers')">👥 Signed up users</button>
             <button class="tab-btn" onclick="switchTab('analytics')">Analytics</button>
         </div>
 
@@ -573,6 +574,75 @@
             </form>
         </div>
 
+        <!-- Subscribers Tab -->
+        <div id="subscribers" class="tab-content">
+            <h2 class="section-title">👥 Signed up users</h2>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <input type="text" id="subscriber-search" placeholder="Search by email..." 
+                           style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 300px;"
+                           onkeyup="filterSubscribers()">
+                    <select id="type-filter" onchange="filterSubscribers()" 
+                            style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; margin-left: 10px;">
+                        <option value="all">All Types</option>
+                        <option value="festival">Festival</option>
+                        <option value="blog">Blog</option>
+                    </select>
+                    <select id="status-filter" onchange="filterSubscribers()" 
+                            style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; margin-left: 10px;">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div>
+                    <button class="btn" onclick="loadSubscribers()">🔄 Refresh</button>
+                    <button class="btn" onclick="exportSubscribers()" style="margin-left: 10px; background: #27ae60;">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <div id="subscribers-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    <div style="font-size: 24px; font-weight: bold; color: #667eea;" id="total-subs-count">0</div>
+                    <div style="color: #666; font-size: 14px;">Total Subscribers</div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    <div style="font-size: 24px; font-weight: bold; color: #27ae60;" id="active-subs-count">0</div>
+                    <div style="color: #666; font-size: 14px;">Active</div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    <div style="font-size: 24px; font-weight: bold; color: #3498db;" id="festival-subs-count">0</div>
+                    <div style="color: #666; font-size: 14px;">Festival Subscribers</div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    <div style="font-size: 24px; font-weight: bold; color: #e74c3c;" id="blog-subs-count">0</div>
+                    <div style="color: #666; font-size: 14px;">Blog Subscribers</div>
+                </div>
+            </div>
+
+            <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: #667eea; color: white;">
+                        <tr>
+                            <th style="padding: 15px; text-align: left; font-weight: 600;">Email</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600;">Type</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600;">Status</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600;">Subscribed Date</th>
+                            <th style="padding: 15px; text-align: left; font-weight: 600;">Preferences</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subscribers-table-body">
+                        <tr>
+                            <td colspan="5" style="padding: 30px; text-align: center; color: #999;">
+                                Loading subscribers...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Analytics Tab -->
         <div id="analytics" class="tab-content">
             <h2 class="section-title">Analytics & Reports</h2>
@@ -635,6 +705,7 @@
             testAPIConnectivity();
             loadDashboard();
             loadPopupSettings();
+            loadSubscribers();
             setMinDateForInputs();
             
             // Add event listeners for auto-generation when fields change
@@ -673,6 +744,11 @@
             // Load auto-newsletter status when newsletter tab is opened
             if (tabName === 'newsletter') {
                 loadAutoNewsletterStatus();
+            }
+            
+            // Load subscribers when subscribers tab is opened
+            if (tabName === 'subscribers') {
+                loadSubscribers();
             }
         }
 
@@ -1877,6 +1953,162 @@
                 button.innerHTML = button.innerHTML.replace('⏳ Generating...', '📧 Send Newsletter');
                 button.disabled = false;
             }
+        }
+
+        // Global subscribers array to enable filtering
+        let allSubscribers = [];
+        
+        // Load subscribers list
+        async function loadSubscribers() {
+            try {
+                console.log('📋 Loading subscribers...');
+                const response = await fetch(`${API_BASE_URL}/api/newsletter/subscribers/${SHOP_DOMAIN}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    allSubscribers = data.subscribers;
+                    
+                    // Update summary counts
+                    document.getElementById('total-subs-count').textContent = data.total;
+                    document.getElementById('active-subs-count').textContent = data.active;
+                    
+                    const festivalCount = allSubscribers.filter(s => s.subscriptionType === 'festival').length;
+                    const blogCount = allSubscribers.filter(s => s.subscriptionType === 'blog').length;
+                    
+                    document.getElementById('festival-subs-count').textContent = festivalCount;
+                    document.getElementById('blog-subs-count').textContent = blogCount;
+                    
+                    // Display subscribers
+                    displaySubscribers(allSubscribers);
+                    
+                    console.log('✅ Loaded', data.total, 'subscribers');
+                } else {
+                    throw new Error(data.error || 'Failed to load subscribers');
+                }
+            } catch (error) {
+                console.error('❌ Error loading subscribers:', error);
+                document.getElementById('subscribers-table-body').innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding: 30px; text-align: center; color: #e74c3c;">
+                            ❌ Error loading subscribers: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Display subscribers in table
+        function displaySubscribers(subscribers) {
+            const tbody = document.getElementById('subscribers-table-body');
+            
+            if (subscribers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding: 30px; text-align: center; color: #999;">
+                            No subscribers found. When users sign up through the popup, they will appear here.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = subscribers.map(sub => {
+                const date = new Date(sub.subscribedAt).toLocaleString('en-IN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const statusColor = sub.isActive ? '#27ae60' : '#95a5a6';
+                const statusText = sub.isActive ? '✅ Active' : '❌ Inactive';
+                
+                const typeColor = sub.subscriptionType === 'festival' ? '#3498db' : '#e74c3c';
+                const typeBadge = sub.subscriptionType === 'festival' ? '🎪 Festival' : '📝 Blog';
+                
+                // Format preferences
+                const prefs = [];
+                if (sub.preferences?.festivals) prefs.push('Festivals');
+                if (sub.preferences?.blogUpdates) prefs.push('Blog');
+                if (sub.preferences?.offers) prefs.push('Offers');
+                const prefsText = prefs.length > 0 ? prefs.join(', ') : 'None';
+                
+                return `
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 15px; color: #2c3e50; font-weight: 500;">${sub.email}</td>
+                        <td style="padding: 15px;">
+                            <span style="background: ${typeColor}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                ${typeBadge}
+                            </span>
+                        </td>
+                        <td style="padding: 15px;">
+                            <span style="color: ${statusColor}; font-weight: 600;">
+                                ${statusText}
+                            </span>
+                        </td>
+                        <td style="padding: 15px; color: #666;">${date}</td>
+                        <td style="padding: 15px; color: #666; font-size: 14px;">${prefsText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Filter subscribers based on search and filters
+        function filterSubscribers() {
+            const searchTerm = document.getElementById('subscriber-search').value.toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+            
+            let filtered = allSubscribers.filter(sub => {
+                const matchesSearch = sub.email.toLowerCase().includes(searchTerm);
+                const matchesType = typeFilter === 'all' || sub.subscriptionType === typeFilter;
+                const matchesStatus = statusFilter === 'all' || 
+                                     (statusFilter === 'active' && sub.isActive) ||
+                                     (statusFilter === 'inactive' && !sub.isActive);
+                
+                return matchesSearch && matchesType && matchesStatus;
+            });
+            
+            displaySubscribers(filtered);
+        }
+        
+        // Export subscribers to CSV
+        function exportSubscribers() {
+            if (allSubscribers.length === 0) {
+                showMessage('No subscribers to export', 'error');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Email', 'Type', 'Status', 'Subscribed Date', 'Festivals', 'Blog Updates', 'Offers'];
+            const rows = allSubscribers.map(sub => [
+                sub.email,
+                sub.subscriptionType,
+                sub.isActive ? 'Active' : 'Inactive',
+                new Date(sub.subscribedAt).toLocaleString('en-IN'),
+                sub.preferences?.festivals ? 'Yes' : 'No',
+                sub.preferences?.blogUpdates ? 'Yes' : 'No',
+                sub.preferences?.offers ? 'Yes' : 'No'
+            ]);
+            
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `subscribers_${SHOP_DOMAIN}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('✅ Subscribers exported successfully!', 'success');
         }
 
         // Regional Preview Functions

@@ -699,7 +699,7 @@ Festival name:`;
     console.log('🔍 Raw AI response:', JSON.stringify(festivalName));
     
     // Clean up the response - remove quotes, extra text, model tokens, etc.
-    festivalName = festivalName.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, ''); // Remove Mistral tokens
+    festivalName = festivalName.replace(/^ \s*/g, '').replace(/\s*<\/s>$/g, ''); // Remove Mistral tokens
     festivalName = festivalName.replace(/^\[OUT\]\s*/g, '').replace(/\s*\[\/OUT\]$/g, ''); // Remove OUT tokens  
     festivalName = festivalName.replace(/["']/g, '');
     festivalName = festivalName.split('\n')[0]; // Take first line only
@@ -738,7 +738,6 @@ Festival name:`;
     throw new Error('OpenRouter DeepSeek API failed');
   }
 }
-
 // Enhanced AI-powered festival name generation with comprehensive festival database
 function generateContextualFestivalName(date, month, season) {
   const day = date.date();
@@ -1477,7 +1476,6 @@ function removeDuplicateFestivals(festivals) {
   console.log(`🧹 Cleaned festivals: ${festivals.length} → ${uniqueFestivals.length}`);
   return uniqueFestivals;
 }
-
 // Function to generate discount code based on festival name and offer (max 6 characters)
 function generateDiscountCode(festivalName, offer) {
   try {
@@ -2268,7 +2266,6 @@ app.get('/api/popup/:shopDomain', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 // Update popup settings
 app.post('/api/popup/:shopDomain', async (req, res) => {
   try {
@@ -2725,7 +2722,7 @@ Only respond with the refined festival name, nothing else.`;
 
         let refinedName = response.data.choices[0].message.content.trim();
         // Clean up model tokens and formatting
-        refinedName = refinedName.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, ''); // Remove Mistral tokens
+        refinedName = refinedName.replace(/^ \s*/g, '').replace(/\s*<\/s>$/g, ''); // Remove Mistral tokens
         refinedName = refinedName.replace(/^\[OUT\]\s*/g, '').replace(/\s*\[\/OUT\]$/g, ''); // Remove OUT tokens
         refinedName = refinedName.replace(/["']/g, '').split('\n')[0];
         
@@ -3022,13 +3019,21 @@ app.post('/api/create-smart-festival', async (req, res) => {
     });
   }
 });
-
 // Newsletter subscription - Updated to handle festival and blog subscriptions separately
 app.post('/api/newsletter/subscribe', async (req, res) => {
   try {
+    // Set CORS headers for cross-origin requests from embedded Shopify app
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Content-Type', 'application/json');
+    
     console.log('=== NEWSLETTER SUBSCRIPTION DEBUG ===');
     const { email, shopDomain, subscriptionType = 'festival', preferences } = req.body;
     console.log('Subscription request:', { email, shopDomain, subscriptionType, preferences });
+    console.log('Request origin:', req.get('origin'));
+    console.log('Request referer:', req.get('referer'));
     
     // Validate subscription type
     if (!['festival', 'blog'].includes(subscriptionType)) {
@@ -3823,7 +3828,6 @@ async function generateAndSendFestivalNewsletter(shopDomain, festival) {
     return { success: false, error: error.message };
   }
 }
-
 // Generate AI-powered festival newsletter content
 async function generateFestivalNewsletterContent(festival) {
   try {
@@ -4466,7 +4470,6 @@ app.get('/api/newsletter/test-subscriber', (req, res) => {
     </html>
   `);
 });
-
 // Duplicate analytics endpoint removed - using the main one at line 1558
 
 // App Embeds Sync Endpoints - NEW
@@ -5232,7 +5235,6 @@ app.get('/api/stats', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 // Remove festival endpoint
 app.post('/api/remove-festival', async (req, res) => {
   try {
@@ -6023,7 +6025,6 @@ app.post('/api/shop-settings/:shopDomain/email/disable', async (req, res) => {
     });
   }
 });
-
 // Update festival email template settings
 app.post('/api/shop-settings/:shopDomain/festival-template', async (req, res) => {
   try {
@@ -6147,8 +6148,8 @@ Generate the JSON response now:`;
     aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
     // Remove control characters that cause JSON parsing issues
     aiResponse = aiResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-    // Remove model-specific tokens (like Mistral's <s> and </s> tokens)
-    aiResponse = aiResponse.replace(/^<s>\s*/g, '').replace(/\s*<\/s>$/g, '');
+    // Remove model-specific tokens (like Mistral's   and   tokens)
+    aiResponse = aiResponse.replace(/^ \s*/g, '').replace(/\s*<\/s>$/g, '');
     // Fix escaped quotes in HTML content that break JSON parsing
     aiResponse = aiResponse.replace(/\\"/g, '"').replace(/\\n/g, '').replace(/\\\//g, '/');
     
@@ -6797,7 +6798,6 @@ app.get('/api/location/festival/:shopDomain', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 // Helper function to get regional festival data
 function getRegionalFestivalData(baseFestival, userState) {
   console.log(`🗺️ Getting regional data for ${baseFestival.name} in ${userState}`);

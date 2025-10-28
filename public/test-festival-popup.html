@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Festival Popup Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .festival-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .festival-info h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .festival-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+        }
+
+        .festival-item.active {
+            border-color: #27ae60;
+            background: #d4edda;
+        }
+
+        .festival-item h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .festival-detail {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .festival-detail strong {
+            color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        .console-log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .console-log div {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .log-info {
+            color: #4ec9b0;
+        }
+
+        .log-success {
+            color: #6a9955;
+        }
+
+        .log-error {
+            color: #f48771;
+        }
+
+        .log-warning {
+            color: #dcdcaa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎪 Festival Popup Tester</h1>
+        <p style="color: #666; margin-bottom: 20px;">Test and debug your festival popup configuration</p>
+
+        <div class="info-box">
+            <strong>📌 Instructions:</strong>
+            <ol style="margin-left: 20px; margin-top: 10px;">
+                <li>Enter your shop domain below</li>
+                <li>Click "Load Festival Data" to fetch configuration</li>
+                <li>Review active festivals and popup settings</li>
+                <li>Use buttons to test popup behavior</li>
+            </ol>
+        </div>
+
+        <label for="shopDomain">Shop Domain:</label>
+        <input type="text" id="shopDomain" value="test-festival-popup.myshopify.com" placeholder="your-shop.myshopify.com">
+
+        <label for="apiUrl">API Base URL:</label>
+        <input type="text" id="apiUrl" value="https://festival-popup-newsletter.onrender.com" placeholder="https://your-api.com">
+
+        <div style="margin: 20px 0;">
+            <button onclick="loadFestivalData()">🔄 Load Festival Data</button>
+            <button onclick="clearStorage()" class="secondary">🗑️ Clear Storage</button>
+            <button onclick="clearConsole()" class="secondary">🧹 Clear Console</button>
+        </div>
+
+        <div id="status" class="status loading" style="display: none;">
+            Loading...
+        </div>
+
+        <div id="festivalInfo" class="festival-info" style="display: none;">
+            <h3>Festival Configuration</h3>
+            <div id="festivalDetails"></div>
+        </div>
+
+        <div id="testControls" style="display: none; margin: 20px 0;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">Test Controls</h3>
+            <button onclick="testPopup()">🎪 Test Show Popup</button>
+            <button onclick="checkStorage()">📊 Check Storage</button>
+            <button onclick="testAPI()">🔌 Test API Connection</button>
+        </div>
+
+        <div class="console-log" id="consoleLog">
+            <div class="log-info">Console output will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://festival-popup-newsletter.onrender.com';
+        let currentData = null;
+
+        function log(message, type = 'info') {
+            const consoleLog = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            console.log(message);
+        }
+
+        function clearConsole() {
+            document.getElementById('consoleLog').innerHTML = '<div class="log-info">Console cleared</div>';
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        async function loadFestivalData() {
+            const shopDomain = document.getElementById('shopDomain').value.trim();
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            
+            if (!shopDomain) {
+                showStatus('Please enter a shop domain', 'error');
+                return;
+            }
+
+            log(`Loading festival data for: ${shopDomain}`, 'info');
+            showStatus('Loading festival data...', 'loading');
+
+            try {
+                const response = await fetch(`${apiUrl}/api/popup/${shopDomain}`, {
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                currentData = data;
+                
+                log(`✅ Data loaded successfully`, 'success');
+                log(`Popup Active: ${data.isActive}`, 'info');
+                log(`Festivals Count: ${data.festivals?.length || 0}`, 'info');
+
+                displayFestivalInfo(data);
+                document.getElementById('testControls').style.display = 'block';
+                showStatus('Festival data loaded successfully!', 'success');
+
+            } catch (error) {
+                log(`❌ Error loading data: ${error.message}`, 'error');
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function displayFestivalInfo(data) {
+            const festivalInfo = document.getElementById('festivalInfo');
+            const festivalDetails = document.getElementById('festivalDetails');
+            
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <strong>Popup Status:</strong>
+                    <span class="badge ${data.isActive ? 'active' : 'inactive'}">
+                        ${data.isActive ? 'ACTIVE ✅' : 'INACTIVE ❌'}
+                    </span>
+                </div>
+            `;
+
+            if (data.festivals && data.festivals.length > 0) {
+                html += '<h4 style="margin-top: 20px; color: #2c3e50;">Festivals:</h4>';
+                
+                data.festivals.forEach((festival, index) => {
+                    const now = new Date();
+                    const startDate = new Date(festival.startDate);
+                    const endDate = new Date(festival.endDate);
+                    const isActive = now >= startDate && now <= endDate;
+
+                    html += `
+                        <div class="festival-item ${isActive ? 'active' : ''}">
+                            <h4>${festival.name} ${isActive ? '✅ ACTIVE NOW' : ''}</h4>
+                            <div class="festival-detail">
+                                <span><strong>Offer:</strong> ${festival.offer}</span>
+                                <span><strong>Code:</strong> ${festival.discountCode}</span>
+                            </div>
+                            <div class="festival-detail">
+                                <span><strong>Start:</strong> ${new Date(festival.startDate).toLocaleDateString()}</span>
+                                <span><strong>End:</strong> ${new Date(festival.endDate).toLocaleDateString()}</span>
+                            </div>
+                            ${festival.backgroundColor ? `
+                                <div class="festival-detail">
+                                    <span><strong>Colors:</strong></span>
+                                    <span style="background: ${festival.backgroundColor}; color: ${festival.textColor}; padding: 3px 10px; border-radius: 5px;">
+                                        Sample
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p style="color: #dc3545; margin-top: 15px;">⚠️ No festivals configured</p>';
+            }
+
+            if (data.displaySettings) {
+                html += `
+                    <h4 style="margin-top: 20px; color: #2c3e50;">Display Settings:</h4>
+                    <div class="festival-detail">
+                        <span><strong>Show Delay:</strong></span>
+                        <span>${data.displaySettings.showDelay}ms</span>
+                    </div>
+                    <div class="festival-detail">
+                        <span><strong>Frequency:</strong></span>
+                        <span>${data.displaySettings.displayFrequency}</span>
+                    </div>
+                `;
+            }
+
+            festivalDetails.innerHTML = html;
+            festivalInfo.style.display = 'block';
+        }
+
+        function testPopup() {
+            log('Testing popup display...', 'info');
+            
+            if (!currentData || !currentData.festivals || currentData.festivals.length === 0) {
+                log('❌ No festival data available to test', 'error');
+                showStatus('Load festival data first', 'error');
+                return;
+            }
+
+            // Find active festival
+            const now = new Date();
+            const activeFestival = currentData.festivals.find(festival => {
+                const startDate = new Date(festival.startDate);
+                const endDate = new Date(festival.endDate);
+                return now >= startDate && now <= endDate;
+            });
+
+            if (!activeFestival) {
+                log('⚠️ No active festival found in current data', 'warning');
+                showStatus('No active festival to display', 'error');
+                return;
+            }
+
+            log(`✅ Found active festival: ${activeFestival.name}`, 'success');
+            log(`Simulating popup display with festival data...`, 'info');
+            showStatus(`Would show popup for: ${activeFestival.name}`, 'success');
+            
+            alert(`🎪 Festival Popup Test\n\nFestival: ${activeFestival.name}\nOffer: ${activeFestival.offer}\nCode: ${activeFestival.discountCode}\n\nThis popup would appear on your storefront!`);
+        }
+
+        function checkStorage() {
+            const shopDomain = document.getElementById('shopDomain').value.trim();
+            
+            log('Checking browser storage...', 'info');
+            
+            const sessionClosed = sessionStorage.getItem(`festival-popup-closed-${shopDomain}`);
+            const sessionShown = sessionStorage.getItem(`festival-popup-shown-${shopDomain}`);
+            const localShown = localStorage.getItem(`festival-popup-shown-${shopDomain}`);
+
+            log(`Session - Closed: ${sessionClosed || 'null'}`, 'info');
+            log(`Session - Shown: ${sessionShown || 'null'}`, 'info');
+            log(`Local - Shown: ${localShown || 'null'}`, 'info');
+
+            if (sessionClosed) {
+                log('⚠️ Popup marked as closed in this session', 'warning');
+            }
+            if (sessionShown) {
+                log('⚠️ Popup marked as shown in this session', 'warning');
+            }
+            if (localShown) {
+                const date = new Date(parseInt(localShown));
+                log(`⚠️ Popup shown on: ${date.toLocaleString()}`, 'warning');
+            }
+
+            if (!sessionClosed && !sessionShown && !localShown) {
+                log('✅ No storage restrictions - popup can show', 'success');
+            }
+        }
+
+        async function testAPI() {
+            const shopDomain = document.getElementById('shopDomain').value.trim();
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            
+            log('Testing API connection...', 'info');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${apiUrl}/api/popup/${shopDomain}`, {
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true',
+                        'Accept': 'application/json'
+                    }
+                });
+                const endTime = Date.now();
+                
+                log(`Response time: ${endTime - startTime}ms`, 'info');
+                log(`Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    log('✅ API connection successful', 'success');
+                    showStatus('API connection successful!', 'success');
+                } else {
+                    log(`❌ API returned error: ${response.status}`, 'error');
+                    showStatus(`API Error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ API connection failed: ${error.message}`, 'error');
+                showStatus(`API Connection Failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorage() {
+            const shopDomain = document.getElementById('shopDomain').value.trim();
+            
+            sessionStorage.removeItem(`festival-popup-closed-${shopDomain}`);
+            sessionStorage.removeItem(`festival-popup-shown-${shopDomain}`);
+            localStorage.removeItem(`festival-popup-shown-${shopDomain}`);
+            
+            log('✅ All popup storage cleared', 'success');
+            showStatus('Storage cleared successfully!', 'success');
+        }
+
+        // Auto-load on page load if shop domain is filled
+        window.addEventListener('DOMContentLoaded', () => {
+            const shopDomain = document.getElementById('shopDomain').value.trim();
+            if (shopDomain) {
+                log('Page loaded, ready to test', 'info');
+            }
+        });
+    </script>
+</body>
+</html>
+
